@@ -61,15 +61,12 @@ class QS:
         self.logger = setup_logger(self.__class__.__name__, level=logger_level) if self._log else None
         
         
-        if rng is None and seed is not None:
+        if rng is None :
             # If no RNG is provided but a seed is, initialize a new RNG with the seed.
-            self.rng = default_rng(seed)
-        elif rng is not None:
-            # If an RNG instance is directly provided, use it as is.
-            self.rng = rng
+            self.rng = default_rng
         else:
             # If neither an RNG nor a seed is provided, initialize a new RNG without a specific seed.
-            self.rng = default_rng()
+            self.rng = rng
         # Suggestion of checking flags
         
 
@@ -239,17 +236,21 @@ class QS:
         sampled_positions = []
         local_energies = []  # List to store local energies
         total_accepted = 0  # Initialize total number of accepted moves
+        
+        
 
         for _ in range(nsamples):
             # Perform one step of the MCMC algorithm
-            new_state = self.sampler.step(self.wf, self.alg.state, self._seed )
+
+            new_state  = self.sampler.step(total_accepted, self.wf, self.alg.state, self._seed )
+            total_accepted = new_state.n_accepted
             self.alg.state = new_state
 
             # Calculate the local energy
             E_loc = self.hamiltonian.local_energy(self.wf, new_state.positions)
             local_energies.append(E_loc)  # Store local energy
             
-            total_accepted += new_state.n_accepted  # Accumulate total accepted moves
+            # total_accepted += accept  # Accumulate total accepted moves
 
             # Update the initial state with the new state for the next iteration
             #initial_state = new_state
@@ -257,7 +258,6 @@ class QS:
             # Store sampled positions and calculate acceptance rate
             sampled_positions.append(new_state.positions)
         
-
         # Calculate acceptance rate
         acceptance_rate = total_accepted / nsamples
 

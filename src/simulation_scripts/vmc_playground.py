@@ -1,6 +1,6 @@
 import sys
 
-sys.path.append("/mnt/c/Users/annar/OneDrive/Desktop/FYS4411/Project1_python/FYS4411-Template/src") # append yout path to the src folder
+sys.path.append("/mnt/c/Users/annar/OneDrive/Desktop/FYS4411/Repo/src") # append yout path to the src folder
 import jax
 
 
@@ -61,4 +61,5 @@ results , _ , _  = system.sample(config.nsamples, nchains=config.nchains, seed=c
 
 # display the results
 print("this is the result" , results)
+print(results.energy)
 

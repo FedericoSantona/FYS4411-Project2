@@ -86,7 +86,7 @@ class VMC:
         """
         functions_to_jit = [
             "prob_closure",
-            "wf",
+            "wf_closure",
             "grad_wf_closure",
             "laplacian_closure",
             "grads_closure",
@@ -278,6 +278,6 @@ class VMC:
         # Take a look at the qs.utils.Parameter class. You may or may not use it depending on how you implement your code.
         # Here, we initialize the variational parameter 'alpha'.
         
-        initial_params = {"alpha": jnp.array([0.5])}  # Example initial value for alpha ( 1 paramter)
+        initial_params = {"alpha": jnp.array([0.1])}  # Example initial value for alpha ( 1 paramter)
         self.params = Parameter(initial_params)  # I still do not understand what should be the alpha dim
         pass 
