@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "FYS4411-Template"
+name = "Repo"
 version = "0.1.0"
 description = "Template for students undertaking Computational Physics II"
 authors = ["Daniel <danielhaas.lima@gmail.com>"]
