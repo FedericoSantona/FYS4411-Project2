@@ -6,7 +6,7 @@ authors = ["Daniel <danielhaas.lima@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "3.10.12"
+python = "^3.10.12"
 matplotlib = "^3.7.2"
 ipykernel = "^6.25.1"
 pre-commit = "^3.3.3"
