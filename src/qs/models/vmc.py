@@ -32,6 +32,10 @@ class VMC:
 
         self._initialize_vars(nparticles, dim, log, logger, logger_level)
 
+        self._jit_functions()
+
+
+
         r = 0 # I do not know what is this
         
         self.state = 0 # take a look at the qs.utils State class
@@ -75,7 +79,7 @@ class VMC:
             self.laplacian_closure = self.laplacian_closure_jax
             self._jit_functions()
         else:
-            raise ValueError("Invalid backend:", backend)
+            raise ValueError(f"Backend {self.backend} not supported")
 
     def _jit_functions(self):
         """
@@ -84,13 +88,23 @@ class VMC:
         They have to be pure functions, meaning they cannot have side effects (modify some state variable values outside its local environment)
         Take a close look at "https://jax.readthedocs.io/en/latest/notebooks/Common_Gotchas_in_JAX.html"
         """
-        functions_to_jit = [
-            "prob_closure",
-            "wf_closure",
-            "grad_wf_closure",
-            "laplacian_closure",
-            "grads_closure",
-        ]
+        if self.backend == jnp:
+            functions_to_jit = [
+                "prob_closure",
+                "wf_closure",
+                "grad_wf_closure_jax",
+                "laplacian_closure_jax",
+                "grads_closure_jax",
+            ]
+        elif self.backend == np:
+            functions_to_jit = [
+                "prob_closure",
+                "wf_closure",
+                "grad_wf_closure",
+                "laplacian_closure",
+                "grads_closure",
+            ]
+
         for func in functions_to_jit:
             setattr(self, func, jax.jit(getattr(self, func)))
         return self
@@ -118,7 +132,7 @@ class VMC:
         OBS: We strongly recommend you work with the wavefunction in log domain. 
         """
 
-        return -alpha * jnp.sum(r**2, axis=1)  # Sum over the coordinates x^2 + y^2 + z^2 for each particle
+        return -alpha * self.backend.sum(r**2, axis=1)  # Sum over the coordinates x^2 + y^2 + z^2 for each particle
     
 
     def prob_closure(self, r, alpha):
@@ -192,7 +206,7 @@ class VMC:
     
         # For the given trial wavefunction, the gradient with respect to alpha is the negative of the wavefunction
         # times the sum of the squares of the positions, since the wavefunction is exp(-alpha * sum(r_i^2)).
-        grad_alpha = -jnp.sum(r**2, axis=1)  # The gradient with respect to alpha
+        grad_alpha = -self.backend.sum(r**2, axis=1)  # The gradient with respect to alpha
         return grad_alpha
 
     def grads_closure_jax(self, r, alpha):
@@ -210,8 +224,9 @@ class VMC:
 
         OBS: We strongly recommend you work with the wavefunction in log domain. 
         """
+       
         alpha = self.params.get("alpha")  # Using Parameter.get to access alpha 
-
+        
         return self.laplacian_closure(r, alpha)
 
     def laplacian_closure(self, r, alpha):
@@ -222,7 +237,8 @@ class VMC:
         # For a Gaussian wavefunction in log domain, the Laplacian is simply 2*alpha*d - 4*alpha^2*sum(r_i^2),
         # where d is the number of dimensions.
         d = r.shape[1]  # Number of dimensions
-        laplacian = 2 * alpha * d - 4 * alpha**2 * jnp.sum(r**2, axis=1)
+        laplacian = 2 * alpha * d - 4 * alpha**2 * self.backend.sum(r**2, axis=1)
+        laplacian = laplacian.reshape(-1, 1)  # Reshape to (n_particles, 1)
         
         return laplacian
 
@@ -278,6 +294,6 @@ class VMC:
         # Take a look at the qs.utils.Parameter class. You may or may not use it depending on how you implement your code.
         # Here, we initialize the variational parameter 'alpha'.
         
-        initial_params = {"alpha": jnp.array([0.1])}  # Example initial value for alpha ( 1 paramter)
+        initial_params = {"alpha": jnp.array([0.45])}  # Example initial value for alpha ( 1 paramter)
         self.params = Parameter(initial_params)  # I still do not understand what should be the alpha dim
         pass 

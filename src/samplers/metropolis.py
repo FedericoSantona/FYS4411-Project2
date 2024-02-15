@@ -1,4 +1,7 @@
 import jax.numpy as jnp
+import numpy as np
+from jax import jit, ops
+from jax import lax
 import jax.random as random
 from qs.utils import State
 from qs.utils import advance_PRNG_state
@@ -11,17 +14,23 @@ class Metropolis(Sampler):
         # Initialize the VMC instance
         
         # Initialize Metropolis-specific variables
-        self.scale = scale
-        self.logger = logger
         self._seed = seed
-        self.rng = rng
         self._N = n_particles
         self._dim = dim
         self._log = log
         self.alg_inst = alg_inst
+
+        super().__init__(rng, scale, logger, backend)
+
+        if self._backend == "numpy":
+            self.accept_fn = self.accept_numpy
+        elif self._backend == "jax":
+            self.accept_fn = self.accept_jax
+        else:
+            print("back end not supported !!!!!!")
         
-        
-        super().__init__(rng, scale, logger)
+
+
 
     def step(self,  n_accepted , wf, state, seed):
 
@@ -30,16 +39,20 @@ class Metropolis(Sampler):
         initial_positions = state.positions
         #initial_logp = state.logp
 
+
         #print("state BEFORE", initial_positions, initial_logp, state.n_accepted, state.delta)
 
         next_gen = advance_PRNG_state(seed , state.delta)
 
-        rng = self.rng(next_gen)
+       
+
+        rng = self._rng(next_gen)
 
 
         # Generate a proposal move
         proposed_positions = rng.normal(loc= initial_positions , scale =  self.scale)
 
+        
         
         # Calculate log probability densities for current and proposed positions
         log_psi_current = wf(initial_positions)
@@ -51,20 +64,19 @@ class Metropolis(Sampler):
         # Calculate acceptance probability in log domain
         log_accept_prob = (log_psi_proposed - log_psi_current)
 
+        
         #print("log_accept_prob", log_accept_prob)
         #print("log_accept_prob.shape", log_accept_prob.shape)
 
         # Decide on acceptance
-        accept = rng.random() < jnp.exp(log_accept_prob)
-
-        #print("accept", accept.shape, accept)
-
-        # Update state based on acceptance
-        new_positions = proposed_positions if accept else initial_positions
-        new_logp = log_psi_proposed if accept else log_psi_current
-        n_accepted += accept
         
+        accept = rng.random(initial_positions.shape[0]) < self.backend.exp(log_accept_prob)
+        accept = accept.reshape(-1,1)
+
+    
+        new_positions ,new_logp , n_accepted = self.accept_fn(n_accepted= n_accepted , accept = accept,  initial_positions = initial_positions , proposed_positions = proposed_positions ,log_psi_current = log_psi_current,  log_psi_proposed = log_psi_proposed)
         
+       
         #jnp.where(accept[:, None], proposed_positions, initial_positions)
        #new_logp = jnp.where(accept, log_psi_proposed, log_psi_current)
        # n_accepted = jnp.sum(accept)
@@ -78,3 +90,40 @@ class Metropolis(Sampler):
         #print("state AFTER", new_state.positions, new_state.logp, new_state.n_accepted, new_state.delta)
 
         return new_state 
+    
+    
+    def accept_jax (self, n_accepted , accept,  initial_positions , proposed_positions ,log_psi_current,  log_psi_proposed):
+
+        new_positions = self.backend.zeros_like(initial_positions)
+        new_logp = self.backend.zeros_like(log_psi_current)
+
+        for i in range(initial_positions.shape[0]):
+            if accept[i]:
+                n_accepted += 1
+                new_positions = new_positions.at[i].set(proposed_positions[i])
+                new_logp = new_logp.at[i].set(log_psi_proposed[i])
+            else:
+                new_positions = new_positions.at[i].set(initial_positions[i])
+                new_logp = new_logp.at[i].set(log_psi_current[i])
+        
+        return  new_positions, new_logp , n_accepted
+    
+    
+    def accept_numpy (self, n_accepted , accept,  initial_positions , proposed_positions ,log_psi_current,  log_psi_proposed):
+
+        new_positions = self.backend.zeros_like(initial_positions)
+        new_logp = self.backend.zeros_like(log_psi_current)
+
+        for i in range(initial_positions.shape[0]):
+            if accept[i]:
+                n_accepted += 1
+                new_positions[i] = proposed_positions[i]
+                new_logp[i] = log_psi_proposed[i]
+            else:
+                new_positions[i] = initial_positions[i]
+                new_logp[i] = log_psi_current[i]
+        
+        return  new_positions, new_logp , n_accepted
+    
+        
+       

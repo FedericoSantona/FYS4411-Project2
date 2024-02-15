@@ -1,6 +1,7 @@
 import copy
 
 import jax
+import jax.numpy as jnp
 import numpy as np
 from qs.utils import check_and_set_nchains # we suggest you use this function to check and set the number of chains when you parallelize
 from qs.utils import generate_seed_sequence
@@ -13,12 +14,27 @@ jax.config.update("jax_platform_name", "cpu")
 
 
 class Sampler:
-    def __init__(self, rng, scale, logger=None):
+    def __init__(self, rng, scale, logger=None , backend="numpy"):
 
         self._logger = logger
         self.results = None
         self._rng = rng
         self.scale = scale
+        self._backend = backend
+
+        match backend:
+            case "numpy":
+                self.backend = np
+                self.la = np.linalg
+                #self.accept = accept_numpy
+            case  "jax":
+                self.backend = jnp
+                self.la = jnp.linalg
+                #self.accept = accept_jax()
+                # You might also be able to jit some functions here
+            case _: # noqa
+                raise ValueError("Invalid backend:", backend)
+
 
     def sample(self, wf, state, nsamples, nchains=1, seed=None):
         """ 
@@ -88,6 +104,19 @@ class Sampler:
         To be implemented by subclasses
         """
         raise NotImplementedError("Subclasses must implement this method.")
+    
+    def accept_jax(self, n_accepted , accept,  initial_positions , proposed_positions ,log_psi_current,  log_psi_proposed):
+        """
+        To be implemented by subclasses
+        """
+        raise NotImplementedError("Subclasses must implement this method.")
+    
+    def accept_numpy(self, n_accepted , accept,  initial_positions , proposed_positions ,log_psi_current,  log_psi_proposed):
+        """
+        To be implemented by subclasses
+        """
+        raise NotImplementedError("Subclasses must implement this method.")
+    
 
     def set_hamiltonian(self, hamiltonian):
 

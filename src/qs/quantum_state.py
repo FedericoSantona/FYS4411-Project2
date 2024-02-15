@@ -48,10 +48,10 @@ class QS:
         """
 
         self._check_logger(log, logger_level)
+        self.backend = backend
         
         self._log = log
         self.hamiltonian = None
-        self._backend = backend
         self.mcmc_alg = None
         self._optimizer = None
         self.wf = None
@@ -59,7 +59,7 @@ class QS:
         self._seed = seed
         self.logger_level = logger_level
         self.logger = setup_logger(self.__class__.__name__, level=logger_level) if self._log else None
-        
+        self._backend = backend
         
         if rng is None :
             # If no RNG is provided but a seed is, initialize a new RNG with the seed.
@@ -68,6 +68,17 @@ class QS:
             # If neither an RNG nor a seed is provided, initialize a new RNG without a specific seed.
             self.rng = rng
         # Suggestion of checking flags
+            
+        match backend:
+            case "numpy":
+                self.backend = np
+                self.la = np.linalg
+            case  "jax":
+                self.backend = jnp
+                self.la = jnp.linalg
+                # You might also be able to jit some functions here
+            case _: # noqa
+                raise ValueError("Invalid backend:", backend)
         
 
         self._is_initialized_ = False
@@ -175,8 +186,11 @@ class QS:
         else:
             t_range = range(max_iter)
 
+        
 
         for iteration in t_range:
+
+           
             # Sample data in batches
             _, sampled_positions, local_energies = self.sample(nsamples=batch_size, nchains=1, seed=seed)
             
@@ -185,18 +199,9 @@ class QS:
             
 
             # Update alpha using the computed gradients and the optimizer
-            self.alpha = jnp.array(self._optimizer.step(self.alpha, grads_alpha))
-
-
-            """
-            
-            GRADS ALPHA AND POSITIONS ARE NOT BEING UPDATED. I NEED TO FIX THIS.
-            
-            
-            """
+            self.alpha = self.backend.array(self._optimizer.step(self.alpha, grads_alpha))
     
-
-        
+            """
             # Optionally: Log intermediate results or perform evaluations
             if iteration % eval_interval == 0 or iteration == max_iter - 1:
                 # Compute current average energy and its standard deviation
@@ -211,7 +216,7 @@ class QS:
                     tqdm.write(f"Iteration {iteration}: Avg Energy = {avg_energy:.4f}, StdDev = {std_dev_energy:.4f}  ")
                 
             # Additionally, you can implement any model validation or checkpointing here
-            
+            """
             
                 
             
@@ -224,8 +229,10 @@ class QS:
     def sample(self, nsamples, nchains=1, seed=None):
         """helper for the sample method from the Sampler class"""
 
+        
         self._is_initialized() # check if the system is initialized
         
+       
         # Initialize state for the sampler
         #initial_positions = self.alg.state.positions # the position is initialized in the vmc class
         #initial_state = State(positions=initial_positions, logp = self.logp,  n_accepted=0, delta=0)
@@ -241,26 +248,30 @@ class QS:
 
         for _ in range(nsamples):
             # Perform one step of the MCMC algorithm
-
+            
             new_state  = self.sampler.step(total_accepted, self.wf, self.alg.state, self._seed )
+            
             total_accepted = new_state.n_accepted
+
             self.alg.state = new_state
 
             # Calculate the local energy
+
             E_loc = self.hamiltonian.local_energy(self.wf, new_state.positions)
+            
             local_energies.append(E_loc)  # Store local energy
             
             # total_accepted += accept  # Accumulate total accepted moves
 
             # Update the initial state with the new state for the next iteration
             #initial_state = new_state
+           
 
             # Store sampled positions and calculate acceptance rate
             sampled_positions.append(new_state.positions)
         
         # Calculate acceptance rate
         acceptance_rate = total_accepted / nsamples
-
 
         # Compute statistics of local energies
         mean_energy = np.mean(local_energies)

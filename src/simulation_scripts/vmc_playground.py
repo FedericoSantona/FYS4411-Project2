@@ -39,13 +39,13 @@ system.set_sampler(mcmc_alg=config.mcmc_alg, scale=1.0)
 # choose the hamiltonian
 system.set_hamiltonian(type_="ho", int_type="Coulomb", omega=1.0)
 
-
 # choose the optimizer, learning rate, and other properties depending on the optimizer
 system.set_optimizer(
     optimizer=config.optimizer,
     eta=config.eta,
 )
 
+print("the system is set up")
 
 # train the system, meaning we find the optimal variational parameters for the wave function
 system.train(

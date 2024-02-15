@@ -1,5 +1,6 @@
 import jax
 import jax.numpy as jnp
+from jax import jit
 import numpy as np
 from qs.models.vmc import VMC
 
@@ -52,34 +53,31 @@ class HarmonicOscillator(Hamiltonian):
         int_type,
         backend,
     ):
-        self._N = nparticles
-        self._dim = dim
-        self._int_type = int_type
-        self.backend = backend
+        # Initialize the parent class, which sets up the backend among other things
+        super().__init__(nparticles, dim, int_type, backend)
+        
+        # Set additional attributes specific to HarmonicOscillator
         self.seed = seed
         self.log = log
         self.logger = logger
         self.logger_level = logger_level
         self.alg_int = alg_int
 
-       
-        super().__init__(nparticles, dim, int_type, backend)
-
+    
     def local_energy(self, wf, r):
-       
         """Local energy of the system
         Calculates the local energy of a system with positions `r` and wavefunction `wf`.
         `wf` is assumed to be the log of the wave function.
         """
         # Potential Energy
-        pe = 0.5 * jnp.sum(r**2, axis=1).mean()  # Sum over dimensions, mean over particles
+        pe = 0.5 * self.backend.sum(r**2, axis=1).mean()  # Use self.backend to support numpy/jax.numpy
+       
+       
+        # Kinetic Energy using automatic differentiation on the log of the wavefunction 
 
-        # Kinetic Energy using automatic differentiation on the log of the wavefunction
-        laplacian = jnp.sum(self.alg_int.laplacian(r) , axis= 1).mean()
-
+        laplacian = self.backend.sum(self.alg_int.laplacian(r), axis=1).mean()
+        
         # Correct calculation of local energy
         local_energy = -0.5 * laplacian + pe
-        
 
-    
         return local_energy
