@@ -92,19 +92,19 @@ class Metropolis(Sampler):
         return new_state 
     
     
-    def accept_jax (self, n_accepted , accept,  initial_positions , proposed_positions ,log_psi_current,  log_psi_proposed):
+    def accept_jax(self, n_accepted , accept,  initial_positions , proposed_positions ,log_psi_current,  log_psi_proposed):
 
         new_positions = self.backend.zeros_like(initial_positions)
         new_logp = self.backend.zeros_like(log_psi_current)
 
-        for i in range(initial_positions.shape[0]):
-            if accept[i]:
-                n_accepted += 1
-                new_positions = new_positions.at[i].set(proposed_positions[i])
-                new_logp = new_logp.at[i].set(log_psi_proposed[i])
-            else:
-                new_positions = new_positions.at[i].set(initial_positions[i])
-                new_logp = new_logp.at[i].set(log_psi_current[i])
+        support1 = jnp.matmul(accept.T , proposed_positions)
+        support2 = jnp.matmul(1-accept.T , initial_positions) 
+
+        new_positions = support1 + support2
+
+        n_accepted = jnp.sum(accept)
+
+        new_logp = jnp.where(accept, log_psi_proposed, log_psi_current)
         
         return  new_positions, new_logp , n_accepted
     

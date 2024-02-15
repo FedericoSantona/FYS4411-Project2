@@ -1,12 +1,16 @@
 import sys
 
+"""
 with open("../../identity.txt") as file:
     path = file.read()
     path = str(path).strip()
 
-
-
 sys.path.append(str(path)) # append yout path to the src folder
+
+"""
+
+sys.path.append("/mnt/c/Users/annar/OneDrive/Desktop/FYS4411/Repo/src")
+
 import jax
 
 
@@ -59,8 +63,6 @@ system.train(
     batch_size=config.batch_size,
     seed=config.seed,
 )
-
-print("the training is done")
 
 # now we get the results or do whatever we want with them
 results , _ , _  = system.sample(config.nsamples, nchains=config.nchains, seed=config.seed)

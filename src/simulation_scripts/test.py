@@ -1,13 +1,11 @@
 import jax.numpy as jnp
+import numpy as np
 
 # Define some sample data
-accept = jnp.array([True, False, True])
-proposed_positions = jnp.array([[1, 2], [3, 4], [5, 6]])
-initial_positions = jnp.array([[10, 20], [30, 40], [50, 60]])
 
-# Apply jnp.where to the sample data
-new_positions = jnp.where(accept[:, None], proposed_positions, initial_positions)
+proposed_positions = np.array([[1, 2], [3, 4], [5, 6]])
 
-# Print the result
-print("New positions:")
-print(new_positions)
+print("proposed_positions", proposed_positions)
+
+print("proposed_positions line ", proposed_positions[0])
+p

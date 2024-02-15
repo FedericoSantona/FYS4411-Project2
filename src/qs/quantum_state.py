@@ -129,7 +129,8 @@ class QS:
 
         if type_ == "ho":
             self.hamiltonian = HO(vmc_instance, self._N, self._dim,  self._log, self.logger, self._seed, self.logger_level, self.int_type, self._backend)
-
+        else:
+            raise ValueError("Invalid Hamiltonian type, should be 'ho'")
         # check HO script
 
 
