@@ -1,6 +1,12 @@
 import sys
 
-sys.path.append("/mnt/c/Users/annar/OneDrive/Desktop/FYS4411/Repo/src") # append yout path to the src folder
+with open("../../identity.txt") as file:
+    path = file.read()
+    path = str(path).strip()
+
+
+
+sys.path.append(str(path)) # append yout path to the src folder
 import jax
 
 
