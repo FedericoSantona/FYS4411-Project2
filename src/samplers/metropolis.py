@@ -76,10 +76,6 @@ class Metropolis(Sampler):
     
         new_positions ,new_logp , n_accepted = self.accept_fn(n_accepted= n_accepted , accept = accept,  initial_positions = initial_positions , proposed_positions = proposed_positions ,log_psi_current = log_psi_current,  log_psi_proposed = log_psi_proposed)
         
-       
-        #jnp.where(accept[:, None], proposed_positions, initial_positions)
-       #new_logp = jnp.where(accept, log_psi_proposed, log_psi_current)
-       # n_accepted = jnp.sum(accept)
 
         #print("initial_positions", initial_positions)   
         #print("new_positions", new_positions)

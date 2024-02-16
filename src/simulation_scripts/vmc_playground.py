@@ -1,15 +1,15 @@
 import sys
 
-"""
+
 with open("../../identity.txt") as file:
     path = file.read()
     path = str(path).strip()
 
 sys.path.append(str(path)) # append yout path to the src folder
 
-"""
 
-sys.path.append("/mnt/c/Users/annar/OneDrive/Desktop/FYS4411/Repo/src")
+
+#sys.path.append("/mnt/c/Users/annar/OneDrive/Desktop/FYS4411/Repo/src")
 
 import jax
 
@@ -43,11 +43,12 @@ system.set_wf(
 
 
 # choose the sampler algorithm and scale
-system.set_sampler(mcmc_alg=config.mcmc_alg, scale=1.0)
-
+system.set_sampler(mcmc_alg=config.mcmc_alg, scale=config.scale)
+ 
 
 # choose the hamiltonian
 system.set_hamiltonian(type_="ho", int_type="Coulomb", omega=1.0)
+
 
 # choose the optimizer, learning rate, and other properties depending on the optimizer
 system.set_optimizer(
@@ -69,5 +70,6 @@ results , _ , _  = system.sample(config.nsamples, nchains=config.nchains, seed=c
 
 # display the results
 print("this is the result" , results)
-print(results.energy)
+print("Result Energy :  ",results.energy)
+print(f"Accept rat: {results.accept_rate}")
 
