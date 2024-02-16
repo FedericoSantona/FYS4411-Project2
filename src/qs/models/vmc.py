@@ -17,6 +17,7 @@ class VMC:
         seed= None,
         logger_level="INFO",
         backend="numpy",
+        alpha = None
         
     ):
         
@@ -28,7 +29,10 @@ class VMC:
         self._N = nparticles             
         self.rng = random.PRNGKey(self._seed)  # Initialize RNG with the provided seed
 
-        self._initialize_variational_params() # initialize the variational parameters (ALPHA)
+        if alpha:
+            self._initialize_variational_params(alpha)
+        else:
+            self._initialize_variational_params() # initialize the variational parameters (ALPHA)
 
         self._initialize_vars(nparticles, dim, log, logger, logger_level)
 
@@ -289,11 +293,13 @@ class VMC:
 
         self.state = State(positions=initial_positions, logp=initial_logp , n_accepted= 0 , delta = 0)
 
-    def _initialize_variational_params(self ):
+    def _initialize_variational_params(self , alpha = None ):
         # Initialize variational parameters in the correct range with the correct shape
         # Take a look at the qs.utils.Parameter class. You may or may not use it depending on how you implement your code.
         # Here, we initialize the variational parameter 'alpha'.
-        
-        initial_params = {"alpha": jnp.array([0.5])}  # Example initial value for alpha ( 1 paramter)
+        if alpha:
+            initial_params = {"alpha": jnp.array([alpha])}
+        else:
+            initial_params = {"alpha": jnp.array([0.5])}  # Example initial value for alpha ( 1 paramter)
         self.params = Parameter(initial_params)  # I still do not understand what should be the alpha dim
         pass 

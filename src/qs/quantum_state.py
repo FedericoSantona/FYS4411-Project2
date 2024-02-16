@@ -40,6 +40,7 @@ class QS:
         logger_level="INFO",
         rng=None,
         seed=None,
+        alpha = None
     ):
         """Quantum State
         It is conceptually important to understand that this is the system.
@@ -60,6 +61,7 @@ class QS:
         self.logger_level = logger_level
         self.logger = setup_logger(self.__class__.__name__, level=logger_level) if self._log else None
         self._backend = backend
+        self._init_alpha = alpha
         
         if rng is None :
             # If no RNG is provided but a seed is, initialize a new RNG with the seed.
@@ -97,7 +99,7 @@ class QS:
         self._dim = dim
         self._wf_type = wf_type
 
-        self.alg = VMC(self._N, self._dim, rng=self.rng, log=self._log, logger=self.logger , seed=self._seed , logger_level=self.logger_level, backend=self._backend )
+        self.alg = VMC(self._N, self._dim, rng=self.rng, log=self._log, logger=self.logger , seed=self._seed , logger_level=self.logger_level, backend=self._backend, alpha = self._init_alpha)
         self.alg._initialize_vars(self._N, self._dim, self._log, self.logger, self.logger_level)
 
         self.alpha = self.alg.params.get("alpha")
