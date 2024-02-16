@@ -233,7 +233,7 @@ class VMC:
         """
         Analytical expression for the laplacian of the wavefunction
         """
-        print("ANALITICAL")
+        print("ANALYTICAL")
         # For a Gaussian wavefunction in log domain, the Laplacian is simply 2*alpha*d - 4*alpha^2*sum(r_i^2),
         # where d is the number of dimensions.
         d = r.shape[1]  # Number of dimensions

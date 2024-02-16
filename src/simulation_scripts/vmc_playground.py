@@ -1,15 +1,14 @@
 import sys
-
-
-with open("../../identity.txt") as file:
-    path = file.read()
-    path = str(path).strip()
-
-sys.path.append(str(path)) # append yout path to the src folder
+import os
 
 
 
-#sys.path.append("/mnt/c/Users/annar/OneDrive/Desktop/FYS4411/Repo/src")
+# The following will add the path to the ../src directory, for any given laptop running the code
+# Assuming the structure of the folders are the same as Daniel initially built (i.e /src is the parent of /simulation script etc.)
+script_dir = os.path.dirname(os.path.realpath(__file__))
+parent_dir = os.path.dirname(script_dir)
+sys.path.append(parent_dir)
+
 
 import jax
 
@@ -56,7 +55,7 @@ system.set_optimizer(
     eta=config.eta,
 )
 
-print("the system is set up")
+print("System initialization: Complete..")
 
 # train the system, meaning we find the optimal variational parameters for the wave function
 system.train(
