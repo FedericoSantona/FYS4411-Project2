@@ -1,15 +1,15 @@
 import sys
 
-
+"""
 with open("../../identity.txt") as file:
     path = file.read()
     path = str(path).strip()
 
 sys.path.append(str(path)) # append yout path to the src folder
+"""
 
 
-
-#sys.path.append("/mnt/c/Users/annar/OneDrive/Desktop/FYS4411/Repo/src")
+sys.path.append("/mnt/c/Users/annar/OneDrive/Desktop/FYS4411/Repo/src")
 
 import jax
 
