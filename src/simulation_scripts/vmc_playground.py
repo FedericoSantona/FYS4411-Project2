@@ -1,7 +1,6 @@
 import sys
 import os
 
-<<<<<<< HEAD
 
 
 # The following will add the path to the ../src directory, for any given laptop running the code
@@ -11,19 +10,6 @@ parent_dir = os.path.dirname(script_dir)
 sys.path.append(parent_dir)
 
 
-=======
-"""
-with open("../../identity.txt") as file:
-    path = file.read()
-    path = str(path).strip()
-
-sys.path.append(str(path)) # append yout path to the src folder
-"""
-
-
-sys.path.append("/mnt/c/Users/annar/OneDrive/Desktop/FYS4411/Repo/src")
-
->>>>>>> bde18931abda8731024bafde308f16f184be816a
 import jax
 
 
