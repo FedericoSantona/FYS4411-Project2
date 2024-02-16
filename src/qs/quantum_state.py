@@ -233,21 +233,25 @@ class QS:
         
         self._is_initialized() # check if the system is initialized
         
-       
-        # Initialize state for the sampler
-        #initial_positions = self.alg.state.positions # the position is initialized in the vmc class
-        #initial_state = State(positions=initial_positions, logp = self.logp,  n_accepted=0, delta=0)
-        #initial_state = self.alg.state
-
-        #print("this is the initial state" , self.alg.state.positions, self.alg.state.logp, self.alg.state.n_accepted, self.alg.state.delta)
-
         sampled_positions = []
         local_energies = []  # List to store local energies
         total_accepted = 0  # Initialize total number of accepted moves
         
         
+        if self._log:
+            t_range = tqdm(
+                range(nsamples),
+                desc="[Sampling progress]",
+              #  position=0,
+                leave=True,
+                colour="green",
+            )
+        else:
+            t_range = range(nsamples)
 
-        for _ in range(nsamples):
+
+
+        for _ in t_range:
             # Perform one step of the MCMC algorithm
             
             new_state  = self.sampler.step(total_accepted, self.wf, self.alg.state, self._seed )
@@ -260,19 +264,13 @@ class QS:
 
             E_loc = self.hamiltonian.local_energy(self.wf, new_state.positions)
             
-            local_energies.append(E_loc)  # Store local energy
-            
-            # total_accepted += accept  # Accumulate total accepted moves
-
-            # Update the initial state with the new state for the next iteration
-            #initial_state = new_state
-           
+            local_energies.append(E_loc)  # Store local energy 
 
             # Store sampled positions and calculate acceptance rate
             sampled_positions.append(new_state.positions)
         
         # Calculate acceptance rate
-        acceptance_rate = total_accepted / nsamples
+        acceptance_rate = total_accepted / (nsamples*self._N)
 
         # Compute statistics of local energies
         mean_energy = np.mean(local_energies)
@@ -301,7 +299,7 @@ class QS:
             "std_error": std_error,
             "variance": variance,
             "accept_rate": acceptance_rate,
-            "scale": None,
+            "scale": self.sampler.scale,
             "nsamples": nsamples,
         }
         sample_results = pd.DataFrame(sample_results, index=[0])

@@ -294,6 +294,6 @@ class VMC:
         # Take a look at the qs.utils.Parameter class. You may or may not use it depending on how you implement your code.
         # Here, we initialize the variational parameter 'alpha'.
         
-        initial_params = {"alpha": jnp.array([0.45])}  # Example initial value for alpha ( 1 paramter)
+        initial_params = {"alpha": jnp.array([0.5])}  # Example initial value for alpha ( 1 paramter)
         self.params = Parameter(initial_params)  # I still do not understand what should be the alpha dim
         pass 
