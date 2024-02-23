@@ -28,7 +28,7 @@ All the parameters you want to change are contained in the file config.py
 """
 # set up the system with its backend and level of logging, seed, and other general properties depending on how you want to run it
 
-alpha_values = np.array([0.2,0.4,0.5,0.6,0.8, 5 ,100 ])
+alpha_values = np.array([0.2,0.4,0.5,0.6,0.8, 2.5 , 5])
 energies = []
 variances = []
 error = []
@@ -90,20 +90,22 @@ print("Energies", energies)
 print("Errors", error)
 print("Variances", variances)
 
-# Plotting Energy
-plt.plot(alpha_values, energies, "o-", label="Energy")
-plt.xlabel("Alpha")
-plt.ylabel("Energy")
-plt.title("Energy as a function of alpha")
-plt.legend()
-plt.show()
+fig, ax = plt.subplots(2, 1, figsize=(10, 10))
 
+# Plotting Energy
+ax[0].plot(alpha_values, energies, "o-", label="Energy")
+ax[0].set_xlabel("Alpha")
+ax[0].set_ylabel("Energy")
+ax[0].set_title("Energy as a function of alpha")
+ax[0].legend()
 
 # Plotting Variance
-plt.plot(alpha_values, variances, "o-", label="Variance")
-plt.xlabel("Alpha")
-plt.ylabel("Variance")
-plt.title("Variance as a function of alpha")
-plt.legend()
-plt.show()
+ax[1].plot(alpha_values, variances, "o-", label="Variance")
+ax[1].set_xlabel("Alpha")
+ax[1].set_ylabel("Variance")
+ax[1].set_title("Variance as a function of alpha")
+ax[1].legend()
+
+
+fig.savefig("energy_alpha.png")
 

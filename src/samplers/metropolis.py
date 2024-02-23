@@ -32,7 +32,7 @@ class Metropolis(Sampler):
 
 
 
-    def step(self,  n_accepted , wf, state, seed):
+    def step(self,  n_accepted , wf_squared, state, seed):
 
         """One step of the random walk Metropolis algorithm."""
 
@@ -54,14 +54,14 @@ class Metropolis(Sampler):
         
         
         # Calculate log probability densities for current and proposed positions
-        log_psi_current = wf(initial_positions)
-        log_psi_proposed = wf(proposed_positions)
+        prob_current = wf_squared(initial_positions)
+        prob_proposed = wf_squared(proposed_positions)
 
         #print("log_psi_current", log_psi_current)
         #print("log_psi_proposed", log_psi_proposed)
 
         # Calculate acceptance probability in log domain
-        log_accept_prob = (log_psi_proposed - log_psi_current)
+        log_accept_prob = (prob_proposed - prob_current)
 
         
         #print("log_accept_prob", log_accept_prob)
@@ -75,7 +75,7 @@ class Metropolis(Sampler):
        
 
     
-        new_positions ,new_logp , n_accepted = self.accept_fn(n_accepted= n_accepted , accept = accept,  initial_positions = initial_positions , proposed_positions = proposed_positions ,log_psi_current = log_psi_current,  log_psi_proposed = log_psi_proposed)
+        new_positions ,new_logp , n_accepted = self.accept_fn(n_accepted= n_accepted , accept = accept,  initial_positions = initial_positions , proposed_positions = proposed_positions ,log_psi_current = prob_current,  log_psi_proposed = prob_proposed)
         
 
         #print("initial_positions", initial_positions)   

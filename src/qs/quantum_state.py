@@ -8,6 +8,9 @@ from qs.utils import errors
 from qs.utils import generate_seed_sequence
 from qs.utils import setup_logger
 from qs.utils import State
+from  qs.utils import advance_PRNG_state
+from qs.utils import check_and_set_nchains
+from samplers.sampler import Sampler
 import jax
 import jax.numpy as jnp
 
@@ -203,7 +206,8 @@ class QS:
 
             # Update alpha using the computed gradients and the optimizer
             self.alpha = self.backend.array(self._optimizer.step(self.alpha, grads_alpha))
-            self.alg.params["alpha"] = self.alpha
+
+            #self.alg.params["alpha"] = self.alpha
 
               
             
@@ -222,7 +226,7 @@ class QS:
         local_energies = []  # List to store local energies
         total_accepted = 0  # Initialize total number of accepted moves
         
-        
+        """
         if self._log:
             t_range = tqdm(
                 range(nsamples),
@@ -234,13 +238,13 @@ class QS:
         else:
             t_range = range(nsamples)
 
+        """
 
-
-        for _ in t_range:
+        for _ in range(nsamples):
             # Perform one step of the MCMC algorithm
 
             #print( "position BEFORE ", self.alg.state.positions)
-            new_state  = self.sampler.step(total_accepted, self.wf, self.alg.state, self._seed )
+            new_state  = self.sampler.step(total_accepted, self.logp, self.alg.state, self._seed )
             
             total_accepted = new_state.n_accepted
 
@@ -260,6 +264,7 @@ class QS:
 
             E_loc = self.hamiltonian.local_energy(self.wf, new_state.positions)
 
+
             #print("this is the local energy" , self._backend,  E_loc.shape)
             
             local_energies.append(E_loc)  # Store local energy 
@@ -273,7 +278,7 @@ class QS:
         local_energies = self.backend.array(local_energies)
 
 
-        print("local_energies", local_energies)
+        #print("local_energies", local_energies)
 
         # Compute statistics of local energies
         mean_energy = self.backend.mean(local_energies)
@@ -307,10 +312,12 @@ class QS:
         }
         sample_results = pd.DataFrame(sample_results, index=[0])
 
-
+    
         system_info_repeated = system_info.loc[
             system_info.index.repeat(len(sample_results))
         ].reset_index(drop=True)
+
+    
 
         self._results = pd.concat([system_info_repeated, sample_results], axis=1)
 

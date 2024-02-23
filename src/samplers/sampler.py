@@ -82,8 +82,8 @@ class Sampler:
             pass 
         if self._logger is not None:
             t_range.clear()
-
-
+                                
+                                        
         # calculate energy, error, variance, acceptance rate, and other things you want to display in the results
     
 

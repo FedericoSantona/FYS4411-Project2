@@ -78,6 +78,7 @@ class HarmonicOscillator(Hamiltonian):
         #print(" laplacian shape ", self.backend.sum(self.alg_int.laplacian(r)).shape)
 
         laplacian = self.backend.sum(self.alg_int.laplacian(r))
+        
         # Correct calculation of local energy
         local_energy = -0.5 * laplacian + pe
 

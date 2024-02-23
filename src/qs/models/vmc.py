@@ -260,8 +260,6 @@ class VMC:
         alpha: Parameter(s) of the wavefunction
         """
 
-        print("NUMERICAL")
-        
         # Compute the Hessian (second derivative matrix) of the wavefunction
         hessian_psi = jax.jacfwd(self.grad_wf, argnums=0)
         
@@ -313,6 +311,6 @@ class VMC:
         if alpha:
             initial_params = {"alpha": jnp.array([alpha])}
         else:
-            initial_params = {"alpha": jnp.array([0.5])}  # Example initial value for alpha ( 1 paramter)
+            initial_params = {"alpha": jnp.array([0.2])}  # Example initial value for alpha ( 1 paramter)
         self.params = Parameter(initial_params)  # I still do not understand what should be the alpha dim
         pass 
