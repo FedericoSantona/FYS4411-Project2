@@ -14,13 +14,17 @@ jax.config.update("jax_platform_name", "cpu")
 
 
 class Sampler:
-    def __init__(self, rng, scale, logger=None , backend="numpy"):
+    def __init__(self, alg , hamiltonian, log,  rng, scale, logger=None , backend="numpy"):
 
         self._logger = logger
+        self._log = log
         self.results = None
         self._rng = rng
         self.scale = scale
         self._backend = backend
+        self.alg = alg
+        self.hami = hamiltonian
+        self.step_method = None
 
         match backend:
             case "numpy":
@@ -36,19 +40,22 @@ class Sampler:
                 raise ValueError("Invalid backend:", backend)
 
 
-    def sample(self, wf, state, nsamples, nchains=1, seed=None):
+    def sample(self, nsamples, nchains=1, seed=None):
         """ 
         Will call _sample() and return the results
         We set it this way because if want to be able to parallelize the sampling, each process will call _sample() and return the results to the main process.
         """
         
         nchains = check_and_set_nchains(nchains, self._logger)
-        seeds = generate_seed_sequence(seed, nchains)
+        seeds = generate_seed_sequence(seed, nchains) #YOU have to understand how to use it because you already do it in the MEtro step
         if nchains == 1:
             chain_id = 0
 
+            self._results, self._sampled_positions, self._local_energies = self._sample( nsamples, chain_id)
+
         else:
             # Parallelize
+            print("Value Error parallelization is not implemented!!!!!!")
             pass
 
 
@@ -56,12 +63,12 @@ class Sampler:
         if self._logger is not None:
             self._logger.info("Sampling done")
 
-        return self._results
+        return self._results, self._sampled_positions, self._local_energies
 
-    def _sample(self, wf, nsamples, state, scale, seed, chain_id):
+    def _sample(self, nsamples, chain_id):
         """To be called by process. Here the actual sampling is performed."""
 
-        if self._logger is not None:
+        if self._log:
             t_range = tqdm(
                 range(nsamples),
                 desc=f"[Sampling progress] Chain {chain_id+1}",
@@ -72,38 +79,69 @@ class Sampler:
         else:
             t_range = range(nsamples)
 
-        # Config
-        state = State(state.positions, state.logp, 0, state.delta)
-        energies = np.zeros(nsamples)
 
-        for i in t_range:
-            # this is where you call the step method of the specific sampler (metropolis, metropolis-hastings, etc.)
-            # then from the new state you calculate the local energies 
-            pass 
+        sampled_positions = []
+        local_energies = []  # List to store local energies
+        total_accepted = 0  # Initialize total number of accepted moves
+
+        for _ in t_range:  # Here use range(nsamples) if you train 
+
+            # Perform one step of the MCMC algorithm
+
+            #print( "position BEFORE ", self.alg.state.positions)
+            new_state  = self.step(total_accepted, self.alg.prob, self.alg.state, self._seed )
+            
+            total_accepted = new_state.n_accepted
+
+            self.alg.state = new_state
+
+            #print( "position AFTER ", self.alg.state.positions)
+
+            # Calculate the local energy
+        
+            E_loc = self.hami.local_energy(self.alg.wf, new_state.positions)
+
+
+            #print("this is the local energy" , self._backend,  E_loc.shape)
+            
+            local_energies.append(E_loc)  # Store local energy 
+
+            # Store sampled positions and calculate acceptance rate
+            sampled_positions.append(new_state.positions)
+
         if self._logger is not None:
             t_range.clear()
-                                
+
+
+        # Calculate acceptance rate
+        acceptance_rate = total_accepted / (nsamples*self.alg._N)
+
+        local_energies = self.backend.array(local_energies)
+
+
+        #print("local_energies", local_energies)
+
+        # Compute statistics of local energies
+        mean_energy = self.backend.mean(local_energies)
+        std_error = self.backend.std(local_energies) / self.backend.sqrt(nsamples)
+        variance = self.backend.var(local_energies)                 
                                         
         # calculate energy, error, variance, acceptance rate, and other things you want to display in the results
-    
 
+        # Suggestion of things to display in the results
+    
         sample_results = {
             "chain_id": chain_id,
-            "energy": None,
-            "std_error": None,
-            "variance": None,
-            "accept_rate": None,
-            "scale": None,
+             "energy": mean_energy,
+            "std_error": std_error,
+            "variance": variance,
+            "accept_rate": acceptance_rate,
+            "scale": self.scale,
             "nsamples": nsamples,
         }
 
-        return sample_results, energies
+        return sample_results,   sampled_positions , local_energies
 
-    def step(self, wf, state, seed):
-        """
-        To be implemented by subclasses
-        """
-        raise NotImplementedError("Subclasses must implement this method.")
     
     def accept_jax(self, n_accepted , accept,  initial_positions , proposed_positions ,log_psi_current,  log_psi_proposed):
         """

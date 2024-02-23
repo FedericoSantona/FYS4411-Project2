@@ -75,7 +75,6 @@ class HarmonicOscillator(Hamiltonian):
         """
         # Potential Energy
         pe = 0.5 * self.backend.sum(self.backend.sum(r**2, axis=1))  # Use self.backend to support numpy/jax.numpy
-        print(2)
        
         # Kinetic Energy using automatic differentiation on the log of the wavefunction 
 
@@ -93,20 +92,12 @@ class HarmonicOscillator(Hamiltonian):
     
 
 class EllipticOscillator(HarmonicOscillator):
-    def __init__(self,alg_int,
-            nparticles,
-            dim,
-            log,
-            logger,
-            seed,
-            logger_level,
-            int_type,
-            backend,
-            beta,
-            ):
+    def __init__(self, alg_int, nparticles, dim, log, logger, seed, logger_level, int_type, backend, beta):
+        super().__init__(alg_int, nparticles, dim, log, logger, seed, logger_level, int_type, backend)
         
-        
-        super().__init__(beta)
+        self.beta = beta  # Store the ellipticity parameter
+
+
 
 
     def local_energy(self, wf, r):
@@ -116,10 +107,10 @@ class EllipticOscillator(HarmonicOscillator):
         Calculates the local energy of a system with positions `r` and wavefunction `wf`.
         `wf` is assumed to be the log of the wave function.
         """
-        # Potential Energy
-        pe = 0.5 * self.backend.sum(self.backend.sum(r**2, axis=1))  # Use self.backend to support numpy/jax.numpy
+        # Adjust the potential energy calculation for the elliptic oscillator
+        # Assuming r is structured as [nparticles, dim], and the first column is x, second is y, and the third is z.
+        pe = 0.5 * self.backend.sum(self.beta**2 * r[:, 0]**2 + self.backend.sum(r[:, 1:]**2, axis=1))
 
-    
         # Kinetic Energy using automatic differentiation on the log of the wavefunction 
 
         #print(" laplacian shape ", self.backend.sum(self.alg_int.laplacian(r)).shape)

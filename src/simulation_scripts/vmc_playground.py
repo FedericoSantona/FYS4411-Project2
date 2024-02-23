@@ -34,6 +34,8 @@ system = quantum_state.QS(
     seed=config.seed,
     alpha=config.alpha,
     beta=config.beta,
+    time_step=config.time_step,
+    diffusion_coeff=config.diffusion_coeff
 )
 
 
@@ -43,14 +45,13 @@ system.set_wf(
     config.nparticles,
     config.dim,
 )
-
-
-# choose the sampler algorithm and scale
-system.set_sampler(mcmc_alg=config.mcmc_alg, scale=config.scale)
  
 
 # choose the hamiltonian
-system.set_hamiltonian(type_="ho", int_type="Coulomb", omega=1.0)
+system.set_hamiltonian(type_=config.hamiltonian, int_type="Coulomb", omega=1.0)
+
+# choose the sampler algorithm and scale
+system.set_sampler(mcmc_alg=config.mcmc_alg, scale=config.scale)
 
 
 # choose the optimizer, learning rate, and other properties depending on the optimizer

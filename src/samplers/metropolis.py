@@ -10,17 +10,16 @@ from qs.models.vmc import VMC
 from qs.utils.parameter import Parameter
 
 class Metropolis(Sampler):
-    def __init__(self, alg_inst, rng , scale, n_particles, dim, seed, log, logger=None, logger_level="INFO", backend="Numpy"):
+    def __init__(self, alg_inst, hamiltonian , rng , scale, n_particles, dim, seed, log, logger=None, logger_level="INFO", backend="Numpy"):
         # Initialize the VMC instance
         
         # Initialize Metropolis-specific variables
         self._seed = seed
         self._N = n_particles
         self._dim = dim
-        self._log = log
-        self.alg_inst = alg_inst
+        self.step_method = self.step
 
-        super().__init__(rng, scale, logger, backend)
+        super().__init__(alg_inst , hamiltonian , log,  rng, scale, logger, backend)
 
         if self._backend == "numpy":
             self.accept_fn = self.accept_numpy
@@ -88,7 +87,7 @@ class Metropolis(Sampler):
 
         return new_state 
     
-    
+    """
     def accept_jax(self, n_accepted , accept,  initial_positions , proposed_positions ,log_psi_current,  log_psi_proposed):
 
         new_positions = self.backend.zeros_like(initial_positions)
@@ -123,4 +122,26 @@ class Metropolis(Sampler):
         return  new_positions, new_logp , n_accepted
     
         
-       
+    """
+
+    #These should work better
+
+    def accept_jax(self, n_accepted, accept, initial_positions, proposed_positions, log_psi_current, log_psi_proposed):
+        # Use where to choose between the old and new positions/probabilities based on the accept array
+        new_positions = jnp.where(accept, proposed_positions, initial_positions)
+        new_logp = jnp.where(accept, log_psi_proposed, log_psi_current)
+
+        # Count the number of accepted moves
+        n_accepted += jnp.sum(accept)
+
+        return new_positions, new_logp, n_accepted
+
+    def accept_numpy(self, n_accepted, accept, initial_positions, proposed_positions, log_psi_current, log_psi_proposed):
+        # accept is a boolean array, so you can use it to index directly
+        new_positions = np.where(accept, proposed_positions, initial_positions)
+        new_logp = np.where(accept, log_psi_proposed, log_psi_current)
+
+        # Count the number of accepted moves
+        n_accepted += np.sum(accept)
+
+        return new_positions, new_logp, n_accepted

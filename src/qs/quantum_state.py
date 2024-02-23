@@ -29,6 +29,7 @@ from tqdm.auto import tqdm
 from physics.hamiltonians import HarmonicOscillator as HO
 from physics.hamiltonians import EllipticOscillator as EO
 from samplers.metropolis import Metropolis as Metro
+from samplers.metro_hastings import MetropolisHastings as MetroHastings
 
 from  optimizers.gd import Gd as gd_opt
 
@@ -45,6 +46,8 @@ class QS:
         seed=None,
         alpha = None,
         beta = None,
+        time_step = None,
+        diffusion_coeff = None
     ):
         """Quantum State
         It is conceptually important to understand that this is the system.
@@ -66,6 +69,9 @@ class QS:
         self.logger = setup_logger(self.__class__.__name__, level=logger_level) if self._log else None
         self._backend = backend
         self._init_alpha = alpha
+        self.beta = beta
+        self.time_step = time_step
+        self.diffusion_coeff = diffusion_coeff
         
         if rng is None :
             # If no RNG is provided but a seed is, initialize a new RNG with the seed.
@@ -85,6 +91,9 @@ class QS:
                 # You might also be able to jit some functions here
             case _: # noqa
                 raise ValueError("Invalid backend:", backend)
+            
+
+        print( "This calculation is done with the following backend: ", self._backend)
         
 
         self._is_initialized_ = False
@@ -132,14 +141,12 @@ class QS:
 
         vmc_instance = self.alg
 
-
         if type_ == "ho":
             self.hamiltonian = HO(vmc_instance, self._N, self._dim,  self._log, self.logger, self._seed, self.logger_level, self.int_type, self._backend)
         elif type_ == "eo":
-            self.hamiltonian = EO(vmc_instance, self._N, self._dim,  self._log, self.logger, self._seed, self.logger_level, self.int_type, self._backend)
-
+            self.hamiltonian = EO(vmc_instance, self._N, self._dim,  self._log, self.logger, self._seed, self.logger_level, self.int_type, self._backend , self.beta)
         else:
-            raise ValueError("Invalid Hamiltonian type, should be 'ho'")
+            raise ValueError("Invalid Hamiltonian type, should be 'ho' o 'eo'")
         # check HO script
 
 
@@ -151,11 +158,14 @@ class QS:
         self._scale = scale
         
         vmc_instance = self.alg
+        hami = self.hamiltonian
 
         if self.mcmc_alg == "m":
-
-            self.sampler = Metro(  vmc_instance, self.rng ,self._scale ,self._N , self._dim, self._seed, self._log,  self.logger , self.logger_level, self._backend) 
-
+            self.sampler = Metro(  vmc_instance, hami ,  self.rng ,self._scale ,self._N , self._dim, self._seed, self._log,  self.logger , self.logger_level, self._backend) 
+        elif self.mcmc_alg == "mh":
+            self.sampler = MetroHastings(  vmc_instance, hami ,  self.rng ,self._scale ,self._N , self._dim, self._seed, self._log,  self.logger , self.logger_level, self._backend, self.time_step, self.diffusion_coeff)
+        else:
+            raise ValueError("Invalid MCMC algorithm type, should be 'm' or 'mh'")
         # check metropolis sampler script
 
 
@@ -225,12 +235,13 @@ class QS:
 
        
         self._is_initialized() # check if the system is initialized
-        
+
+        """
         sampled_positions = []
         local_energies = []  # List to store local energies
         total_accepted = 0  # Initialize total number of accepted moves
         
-        """
+        
         if self._log:
             t_range = tqdm(
                 range(nsamples),
@@ -242,7 +253,7 @@ class QS:
         else:
             t_range = range(nsamples)
 
-        """
+        
 
         for _ in range(nsamples):
             # Perform one step of the MCMC algorithm
@@ -252,20 +263,12 @@ class QS:
             
             total_accepted = new_state.n_accepted
 
-            """"
-            if new_state.n_accepted > self.alg.state.n_accepted:
-                print ("accepted")
-            else:
-                print ("not accepted")
-
-            """
-
             self.alg.state = new_state
 
             #print( "position AFTER ", self.alg.state.positions)
 
             # Calculate the local energy
-            print(1)
+        
             E_loc = self.hamiltonian.local_energy(self.wf, new_state.positions)
 
 
@@ -290,18 +293,6 @@ class QS:
         variance = self.backend.var(local_energies)
 
 
-        # Suggestion of things to display in the results
-        system_info = {
-            "nparticles": self._N,
-            "dim": self._dim,
-            "eta": self._eta,
-            "mcmc_alg": self.mcmc_alg,
-            "training_cycles": self._training_cycles,
-            "training_batch": self._training_batch,
-            "Opti": self._optimizer.__class__.__name__,
-        }
-
-        system_info = pd.DataFrame(system_info, index=[0])
 
         #OBS: this should actually be returned from the sampler sample method. This is as is below just a placeholder
         # Update the sample_results dictionary
@@ -314,6 +305,22 @@ class QS:
             "scale": self.sampler.scale,
             "nsamples": nsamples,
         }
+
+        """
+
+        # Suggestion of things to display in the results
+        system_info = {
+            "nparticles": self._N,
+            "dim": self._dim,
+            "eta": self._eta,
+            "mcmc_alg": self.mcmc_alg,
+            "training_cycles": self._training_cycles,
+            "training_batch": self._training_batch,
+            "Opti": self._optimizer.__class__.__name__,
+        }
+
+        sample_results ,  sampled_positions, local_energies = self.sampler.sample(nsamples, nchains)
+        system_info = pd.DataFrame(system_info, index=[0])
         sample_results = pd.DataFrame(sample_results, index=[0])
 
     

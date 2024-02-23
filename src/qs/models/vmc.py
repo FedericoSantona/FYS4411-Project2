@@ -93,22 +93,15 @@ class VMC:
         They have to be pure functions, meaning they cannot have side effects (modify some state variable values outside its local environment)
         Take a close look at "https://jax.readthedocs.io/en/latest/notebooks/Common_Gotchas_in_JAX.html"
         """
-        if self.backend == jnp:
-            functions_to_jit = [
+
+        functions_to_jit = [
                 "prob_closure",
                 "wf_closure",
                 "grad_wf_closure_jax",
                 "laplacian_closure_jax",
                 "grads_closure_jax",
             ]
-        elif self.backend == np:
-            functions_to_jit = [
-                "prob_closure",
-                "wf_closure",
-                "grad_wf_closure",
-                "laplacian_closure",
-                "grads_closure",
-            ]
+        
 
         for func in functions_to_jit:
             setattr(self, func, jax.jit(getattr(self, func)))
@@ -231,7 +224,6 @@ class VMC:
         """
        
         alpha = self.params.get("alpha")  # Using Parameter.get to access alpha 
-        print("kake")
         
         return self.laplacian_closure(r, alpha)
 
@@ -239,7 +231,7 @@ class VMC:
         """
         Analytical expression for the laplacian of the wavefunction
         """
-        print("ANALITICAL")
+        # print("ANALITICAL")
         # For a Gaussian wavefunction in log domain, the Laplacian is simply 2*alpha*d - 4*alpha^2*sum(r_i^2),
         # where d is the number of dimensions.
         d = r.shape[1]  # Number of dimensions
@@ -249,7 +241,7 @@ class VMC:
 
         laplacian = laplacian.reshape(-1, 1)  # Reshape to (n_particles, 1)
 
-        print("laplacian NUMPY ", laplacian.shape)
+       # print("laplacian NUMPY ", laplacian.shape)
       
         return laplacian
 
@@ -312,6 +304,6 @@ class VMC:
         if alpha:
             initial_params = {"alpha": jnp.array([alpha])}
         else:
-            initial_params = {"alpha": jnp.array([0.2])}  # Example initial value for alpha ( 1 paramter)
+            initial_params = {"alpha": jnp.array([0.5])}  # Example initial value for alpha ( 1 paramter)
         self.params = Parameter(initial_params)  # I still do not understand what should be the alpha dim
         pass 
