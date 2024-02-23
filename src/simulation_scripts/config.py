@@ -1,8 +1,8 @@
 # Config
 output_filename = "../data/vmc_playground.csv"
 
-nparticles = 3
-dim = 3
+nparticles = 1
+dim = 1
 nsamples =   int(2**12) #  2**18 = 262144
 scale = 1 + dim*0.1
 nchains = 4 # number of Markov chains. When you parallelize, you can set this to the number of cores. Note you will have to implement this yourself.

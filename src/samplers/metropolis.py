@@ -40,8 +40,7 @@ class Metropolis(Sampler):
         #initial_logp = state.logp
 
 
-        #print("state BEFORE", initial_positions, initial_logp, state.n_accepted, state.delta)
-
+       
         next_gen = advance_PRNG_state(seed , state.delta)
 
        
@@ -72,6 +71,8 @@ class Metropolis(Sampler):
         
         accept = rng.random(initial_positions.shape[0]) < self.backend.exp(log_accept_prob)
         accept = accept.reshape(-1,1)
+
+       
 
     
         new_positions ,new_logp , n_accepted = self.accept_fn(n_accepted= n_accepted , accept = accept,  initial_positions = initial_positions , proposed_positions = proposed_positions ,log_psi_current = log_psi_current,  log_psi_proposed = log_psi_proposed)

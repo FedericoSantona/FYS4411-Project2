@@ -28,9 +28,10 @@ All the parameters you want to change are contained in the file config.py
 """
 # set up the system with its backend and level of logging, seed, and other general properties depending on how you want to run it
 
-alpha_values = np.array([0.2,0.4,0.5,0.6,0.8])
+alpha_values = np.array([0.2,0.4,0.5,0.6,0.8, 5 ,100 ])
 energies = []
 variances = []
+error = []
 
 for i in alpha_values:
     
@@ -80,11 +81,13 @@ for i in alpha_values:
     print("alpha", i)
     print("energy", results.energy)
     energies.append(results.energy)
+    error.append(results.std_error)
     variances.append(results.variance)
 
 
-
+print("Alpha values", alpha_values)
 print("Energies", energies)
+print("Errors", error)
 print("Variances", variances)
 
 # Plotting Energy

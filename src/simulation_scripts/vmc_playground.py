@@ -10,6 +10,8 @@ parent_dir = os.path.dirname(script_dir)
 sys.path.append(parent_dir)
 
 
+#sys.path.append("/mnt/c/Users/annar/OneDrive/Desktop/FYS4411/Repo/src")
+
 import jax
 
 

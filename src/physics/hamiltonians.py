@@ -75,8 +75,13 @@ class HarmonicOscillator(Hamiltonian):
        
         # Kinetic Energy using automatic differentiation on the log of the wavefunction 
 
-        laplacian = self.backend.sum(self.backend.sum(self.alg_int.laplacian(r), axis=1))
+        #print(" laplacian shape ", self.backend.sum(self.alg_int.laplacian(r)).shape)
+
+        laplacian = self.backend.sum(self.alg_int.laplacian(r))
         # Correct calculation of local energy
         local_energy = -0.5 * laplacian + pe
+
+        #local_energy = self.backend.array(local_energy)
+        #local_energy = local_energy.reshape((1, 1))
 
         return local_energy

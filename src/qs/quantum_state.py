@@ -203,26 +203,9 @@ class QS:
 
             # Update alpha using the computed gradients and the optimizer
             self.alpha = self.backend.array(self._optimizer.step(self.alpha, grads_alpha))
-    
-            """
-            # Optionally: Log intermediate results or perform evaluations
-            if iteration % eval_interval == 0 or iteration == max_iter - 1:
-                # Compute current average energy and its standard deviation
-                avg_energy = jnp.mean(local_energies)
-                std_dev_energy = jnp.std(local_energies)
-                
-                print("alpha" , self.alpha)
-                print("grads_alpha" , grads_alpha)
-                #print("position" , sampled_positions)
-                # Logging
-                if self._log:
-                    tqdm.write(f"Iteration {iteration}: Avg Energy = {avg_energy:.4f}, StdDev = {std_dev_energy:.4f}  ")
-                
-            # Additionally, you can implement any model validation or checkpointing here
-            """
-            
-                
-            
+            self.alg.params["alpha"] = self.alpha
+
+              
             
         self._is_trained_ = True
         if self.logger is not None:
@@ -232,7 +215,7 @@ class QS:
     def sample(self, nsamples, nchains=1, seed=None):
         """helper for the sample method from the Sampler class"""
 
-        
+       
         self._is_initialized() # check if the system is initialized
         
         sampled_positions = []
@@ -255,16 +238,29 @@ class QS:
 
         for _ in t_range:
             # Perform one step of the MCMC algorithm
-            
+
+            #print( "position BEFORE ", self.alg.state.positions)
             new_state  = self.sampler.step(total_accepted, self.wf, self.alg.state, self._seed )
             
             total_accepted = new_state.n_accepted
 
+            """"
+            if new_state.n_accepted > self.alg.state.n_accepted:
+                print ("accepted")
+            else:
+                print ("not accepted")
+
+            """
+
             self.alg.state = new_state
+
+            #print( "position AFTER ", self.alg.state.positions)
 
             # Calculate the local energy
 
             E_loc = self.hamiltonian.local_energy(self.wf, new_state.positions)
+
+            #print("this is the local energy" , self._backend,  E_loc.shape)
             
             local_energies.append(E_loc)  # Store local energy 
 
@@ -274,10 +270,15 @@ class QS:
         # Calculate acceptance rate
         acceptance_rate = total_accepted / (nsamples*self._N)
 
+        local_energies = self.backend.array(local_energies)
+
+
+        print("local_energies", local_energies)
+
         # Compute statistics of local energies
-        mean_energy = np.mean(local_energies)
-        std_error = np.std(local_energies) / np.sqrt(nsamples)
-        variance = np.var(local_energies)
+        mean_energy = self.backend.mean(local_energies)
+        std_error = self.backend.std(local_energies) / self.backend.sqrt(nsamples)
+        variance = self.backend.var(local_energies)
 
 
         # Suggestion of things to display in the results
@@ -315,8 +316,8 @@ class QS:
 
         #print("this is the sampled position" , sampled_positions)
 
-        local_energies = np.array(local_energies)
-        sampled_positions = np.array(sampled_positions)
+        local_energies = self.backend.array(local_energies)
+        sampled_positions = self.backend.array(sampled_positions)
 
         return self._results, sampled_positions, local_energies
     

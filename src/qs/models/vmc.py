@@ -2,6 +2,7 @@ import jax
 import jax.numpy as jnp
 import jax.random as random
 import numpy as np
+from jax import device_get
 from qs.utils import Parameter # IMPORTANT: you may or may not use this depending on how you want to implement your code and especially your jax gradient implementation
 from qs.utils import State
 
@@ -237,33 +238,45 @@ class VMC:
         """
         Analytical expression for the laplacian of the wavefunction
         """
-        print("ANALYTICAL")
+        print("ANALITICAL")
         # For a Gaussian wavefunction in log domain, the Laplacian is simply 2*alpha*d - 4*alpha^2*sum(r_i^2),
         # where d is the number of dimensions.
         d = r.shape[1]  # Number of dimensions
-        laplacian = 2 * alpha * d - 4 * alpha**2 * self.backend.sum(r**2, axis=1)
-        laplacian = laplacian.reshape(-1, 1)  # Reshape to (n_particles, 1)
+        r2 =  self.backend.sum(r**2, axis=1)
         
+        laplacian = 4* alpha**2 * r2 - 2 * alpha * d # is this the actual log domain? what is the log domain?
+
+        laplacian = laplacian.reshape(-1, 1)  # Reshape to (n_particles, 1)
+
+        #print("laplacian NUMPY ", laplacian.shape)
+      
         return laplacian
 
     def laplacian_closure_jax(self, r, alpha):
+      
         """
-        Computes the Laplacian of the wavefunction using JAX automatic differentiation.
-        r: Position array
+        Computes the Laplacian of the wavefunction for each particle using JAX automatic differentiation.
+        r: Position array of shape (n_particles, n_dimensions)
         alpha: Parameter(s) of the wavefunction
         """
-        # Define a function that computes the sum of the squared gradients (for scalar output)
-        def sum_of_squares_of_grads(positions):
-            grad_fn = jax.grad(lambda pos: jnp.sum(self.wf_closure(pos, alpha)), argnums=0)
-            grads = grad_fn(positions)
-            return jnp.sum(grads**2)
 
-        # Now, compute the gradient of the sum of squares of gradients to get the Laplacian
-        laplacian_fn = jax.grad(sum_of_squares_of_grads, argnums=0)
-        laplacian = laplacian_fn(r)
+        print("NUMERICAL")
         
-        # Depending on your needs, you might need to adjust this to ensure correct shape/sum
-        return laplacian
+        # Compute the Hessian (second derivative matrix) of the wavefunction
+        hessian_psi = jax.jacfwd(self.grad_wf, argnums=0)
+        
+        # Apply the Hessian function to the positions to get the second derivatives
+        hessian_matrix = hessian_psi(r)
+        
+        # For each particle, sum the diagonal elements of the Hessian to get the Laplacian
+        laplacians = jnp.array([jnp.trace(hessian_matrix[i]) for i in range(r.shape[0])])
+        
+        # Reshape the result to have shape (n_particles, 1) as desired
+        laplacians = laplacians.reshape(-1, 1)
+        
+        #print("laplacian JAX ", laplacians.shape)
+
+        return laplacians
 
     def _initialize_vars(self, nparticles, dim, log, logger, logger_level):
         
