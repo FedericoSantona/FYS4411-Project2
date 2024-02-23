@@ -15,3 +15,5 @@ batch_size = 100
 detailed = True
 wf_type = "vmc"
 seed = 142
+alpha = 0.5
+beta = 1

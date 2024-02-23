@@ -18,7 +18,7 @@ class VMC:
         seed= None,
         logger_level="INFO",
         backend="numpy",
-        alpha = None
+        alpha = None,
         
     ):
         
@@ -231,6 +231,7 @@ class VMC:
         """
        
         alpha = self.params.get("alpha")  # Using Parameter.get to access alpha 
+        print("kake")
         
         return self.laplacian_closure(r, alpha)
 
@@ -248,7 +249,7 @@ class VMC:
 
         laplacian = laplacian.reshape(-1, 1)  # Reshape to (n_particles, 1)
 
-        #print("laplacian NUMPY ", laplacian.shape)
+        print("laplacian NUMPY ", laplacian.shape)
       
         return laplacian
 

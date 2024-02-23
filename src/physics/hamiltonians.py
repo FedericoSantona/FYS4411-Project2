@@ -63,6 +63,10 @@ class HarmonicOscillator(Hamiltonian):
         self.logger_level = logger_level
         self.alg_int = alg_int
 
+
+
+        
+
     
     def local_energy(self, wf, r):
         """Local energy of the system
@@ -71,8 +75,51 @@ class HarmonicOscillator(Hamiltonian):
         """
         # Potential Energy
         pe = 0.5 * self.backend.sum(self.backend.sum(r**2, axis=1))  # Use self.backend to support numpy/jax.numpy
-
+        print(2)
        
+        # Kinetic Energy using automatic differentiation on the log of the wavefunction 
+
+        #print(" laplacian shape ", self.backend.sum(self.alg_int.laplacian(r)).shape)
+
+        laplacian = self.backend.sum(self.alg_int.laplacian(r))
+        
+        # Correct calculation of local energy
+        local_energy = -0.5 * laplacian + pe
+
+        #local_energy = self.backend.array(local_energy)
+        #local_energy = local_energy.reshape((1, 1))
+
+        return local_energy
+    
+
+class EllipticOscillator(HarmonicOscillator):
+    def __init__(self,alg_int,
+            nparticles,
+            dim,
+            log,
+            logger,
+            seed,
+            logger_level,
+            int_type,
+            backend,
+            beta,
+            ):
+        
+        
+        super().__init__(beta)
+
+
+    def local_energy(self, wf, r):
+        ###TODO Impliment local energy for EO
+
+        """Local energy of the system
+        Calculates the local energy of a system with positions `r` and wavefunction `wf`.
+        `wf` is assumed to be the log of the wave function.
+        """
+        # Potential Energy
+        pe = 0.5 * self.backend.sum(self.backend.sum(r**2, axis=1))  # Use self.backend to support numpy/jax.numpy
+
+    
         # Kinetic Energy using automatic differentiation on the log of the wavefunction 
 
         #print(" laplacian shape ", self.backend.sum(self.alg_int.laplacian(r)).shape)

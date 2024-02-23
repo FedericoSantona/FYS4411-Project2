@@ -27,7 +27,7 @@ from numpy.random import default_rng
 from tqdm.auto import tqdm
 
 from physics.hamiltonians import HarmonicOscillator as HO
-
+from physics.hamiltonians import EllipticOscillator as EO
 from samplers.metropolis import Metropolis as Metro
 
 from  optimizers.gd import Gd as gd_opt
@@ -43,7 +43,8 @@ class QS:
         logger_level="INFO",
         rng=None,
         seed=None,
-        alpha = None
+        alpha = None,
+        beta = None,
     ):
         """Quantum State
         It is conceptually important to understand that this is the system.
@@ -134,6 +135,9 @@ class QS:
 
         if type_ == "ho":
             self.hamiltonian = HO(vmc_instance, self._N, self._dim,  self._log, self.logger, self._seed, self.logger_level, self.int_type, self._backend)
+        elif type_ == "eo":
+            self.hamiltonian = EO(vmc_instance, self._N, self._dim,  self._log, self.logger, self._seed, self.logger_level, self.int_type, self._backend)
+
         else:
             raise ValueError("Invalid Hamiltonian type, should be 'ho'")
         # check HO script
@@ -261,7 +265,7 @@ class QS:
             #print( "position AFTER ", self.alg.state.positions)
 
             # Calculate the local energy
-
+            print(1)
             E_loc = self.hamiltonian.local_energy(self.wf, new_state.positions)
 
 

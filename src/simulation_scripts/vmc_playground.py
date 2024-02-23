@@ -32,6 +32,8 @@ system = quantum_state.QS(
     log=True,
     logger_level="INFO",
     seed=config.seed,
+    alpha=config.alpha,
+    beta=config.beta,
 )
 
 
