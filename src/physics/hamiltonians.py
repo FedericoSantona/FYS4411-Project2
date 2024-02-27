@@ -64,9 +64,6 @@ class HarmonicOscillator(Hamiltonian):
         self.alg_int = alg_int
 
 
-
-        
-
     
     def local_energy(self, wf, r):
         """Local energy of the system
@@ -94,11 +91,8 @@ class HarmonicOscillator(Hamiltonian):
 class EllipticOscillator(HarmonicOscillator):
     def __init__(self, alg_int, nparticles, dim, log, logger, seed, logger_level, int_type, backend, beta):
         super().__init__(alg_int, nparticles, dim, log, logger, seed, logger_level, int_type, backend)
-        
+
         self.beta = beta  # Store the ellipticity parameter
-
-
-
 
     def local_energy(self, wf, r):
         ###TODO Impliment local energy for EO

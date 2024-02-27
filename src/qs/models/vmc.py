@@ -183,7 +183,7 @@ class VMC:
         OBS: We strongly recommend you work with the wavefunction in log domain. 
         """
         alpha = self.params.get("alpha")  # Using Parameter.get to access alpha 
-
+        
         return self.grad_wf_closure(r, alpha)
 
     def grads(self, r):

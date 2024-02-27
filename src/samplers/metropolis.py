@@ -36,10 +36,8 @@ class Metropolis(Sampler):
         """One step of the random walk Metropolis algorithm."""
 
         initial_positions = state.positions
-        #initial_logp = state.logp
-
-
        
+        #print("initial_positions", initial_positions)
         next_gen = advance_PRNG_state(seed , state.delta)
 
        
@@ -80,6 +78,8 @@ class Metropolis(Sampler):
         #print("initial_positions", initial_positions)   
         #print("new_positions", new_positions)
 
+        
+
         # Create new state
         new_state = State(positions=new_positions, logp=new_logp, n_accepted=n_accepted, delta=state.delta + 1)
 
@@ -87,43 +87,7 @@ class Metropolis(Sampler):
 
         return new_state 
     
-    """
-    def accept_jax(self, n_accepted , accept,  initial_positions , proposed_positions ,log_psi_current,  log_psi_proposed):
-
-        new_positions = self.backend.zeros_like(initial_positions)
-        new_logp = self.backend.zeros_like(log_psi_current)
-
-        support1 = jnp.matmul(accept.T , proposed_positions)
-        support2 = jnp.matmul(1-accept.T , initial_positions) 
-
-        new_positions = support1 + support2
-
-        n_accepted = jnp.sum(accept)
-
-        new_logp = jnp.where(accept, log_psi_proposed, log_psi_current)
-        
-        return  new_positions, new_logp , n_accepted
     
-    
-    def accept_numpy (self, n_accepted , accept,  initial_positions , proposed_positions ,log_psi_current,  log_psi_proposed):
-
-        new_positions = self.backend.zeros_like(initial_positions)
-        new_logp = self.backend.zeros_like(log_psi_current)
-
-        for i in range(initial_positions.shape[0]):
-            if accept[i]:
-                n_accepted += 1
-                new_positions[i] = proposed_positions[i]
-                new_logp[i] = log_psi_proposed[i]
-            else:
-                new_positions[i] = initial_positions[i]
-                new_logp[i] = log_psi_current[i]
-        
-        return  new_positions, new_logp , n_accepted
-    
-        
-    """
-
     #These should work better
 
     def accept_jax(self, n_accepted, accept, initial_positions, proposed_positions, log_psi_current, log_psi_proposed):

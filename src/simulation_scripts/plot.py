@@ -28,7 +28,7 @@ All the parameters you want to change are contained in the file config.py
 """
 # set up the system with its backend and level of logging, seed, and other general properties depending on how you want to run it
 
-alpha_values = np.array([ 0.1 ,0.2, 0.3 , 0.4,0.5, 0.6, 0.7 , 0.8, 0.9, 1 ,1.1 , 1.2 ,1.3, 1.4 ,1.5, 1.6])
+alpha_values = np.array([ 0.2, 0.3 , 0.4,0.5, 0.6, 0.7 , 0.8, 0.9, 1 ,1.1 , 1.2 ,1.3, 1.4 ,1.5, 1.6])
 energies = []
 variances = []
 error = []

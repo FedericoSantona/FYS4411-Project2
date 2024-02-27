@@ -109,6 +109,8 @@ class Sampler:
             # Store sampled positions and calculate acceptance rate
             sampled_positions.append(new_state.positions)
 
+
+            
         if self._logger is not None:
             t_range.clear()
 

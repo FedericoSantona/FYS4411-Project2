@@ -161,8 +161,11 @@ class QS:
         hami = self.hamiltonian
 
         if self.mcmc_alg == "m":
+            print("The chosen MCMC algorithm is the Metropolis algorithm")
             self.sampler = Metro(  vmc_instance, hami ,  self.rng ,self._scale ,self._N , self._dim, self._seed, self._log,  self.logger , self.logger_level, self._backend) 
+            print
         elif self.mcmc_alg == "mh":
+            print("The chosen MCMC algorithm is the Metropolis-Hastings algorithm")
             self.sampler = MetroHastings(  vmc_instance, hami ,  self.rng ,self._scale ,self._N , self._dim, self._seed, self._log,  self.logger , self.logger_level, self._backend, self.time_step, self.diffusion_coeff)
         else:
             raise ValueError("Invalid MCMC algorithm type, should be 'm' or 'mh'")
@@ -236,77 +239,6 @@ class QS:
        
         self._is_initialized() # check if the system is initialized
 
-        """
-        sampled_positions = []
-        local_energies = []  # List to store local energies
-        total_accepted = 0  # Initialize total number of accepted moves
-        
-        
-        if self._log:
-            t_range = tqdm(
-                range(nsamples),
-                desc="[Sampling progress]",
-              #  position=0,
-                leave=True,
-                colour="green",
-            )
-        else:
-            t_range = range(nsamples)
-
-        
-
-        for _ in range(nsamples):
-            # Perform one step of the MCMC algorithm
-
-            #print( "position BEFORE ", self.alg.state.positions)
-            new_state  = self.sampler.step(total_accepted, self.logp, self.alg.state, self._seed )
-            
-            total_accepted = new_state.n_accepted
-
-            self.alg.state = new_state
-
-            #print( "position AFTER ", self.alg.state.positions)
-
-            # Calculate the local energy
-        
-            E_loc = self.hamiltonian.local_energy(self.wf, new_state.positions)
-
-
-            #print("this is the local energy" , self._backend,  E_loc.shape)
-            
-            local_energies.append(E_loc)  # Store local energy 
-
-            # Store sampled positions and calculate acceptance rate
-            sampled_positions.append(new_state.positions)
-        
-        # Calculate acceptance rate
-        acceptance_rate = total_accepted / (nsamples*self._N)
-
-        local_energies = self.backend.array(local_energies)
-
-
-        #print("local_energies", local_energies)
-
-        # Compute statistics of local energies
-        mean_energy = self.backend.mean(local_energies)
-        std_error = self.backend.std(local_energies) / self.backend.sqrt(nsamples)
-        variance = self.backend.var(local_energies)
-
-
-
-        #OBS: this should actually be returned from the sampler sample method. This is as is below just a placeholder
-        # Update the sample_results dictionary
-        sample_results = {
-            "chain_id": None,
-            "energy": mean_energy,
-            "std_error": std_error,
-            "variance": variance,
-            "accept_rate": acceptance_rate,
-            "scale": self.sampler.scale,
-            "nsamples": nsamples,
-        }
-
-        """
 
         # Suggestion of things to display in the results
         system_info = {

@@ -48,6 +48,8 @@ class MetropolisHastings(Sampler):
 
         initial_positions = state.positions
        
+        #print("initial_positions", initial_positions)
+
         # Use the current positions to generate the quantum force
         quantum_force_current = self.quantum_force(initial_positions)
 
@@ -56,7 +58,7 @@ class MetropolisHastings(Sampler):
         rng = self._rng(next_gen)
 
         # Generate a proposal move
-        eta = rng.normal(loc= initial_positions , scale =  self.scale)
+        eta = rng.normal(loc= initial_positions , scale = self.scale)
 
         proposed_positions = initial_positions + self.diffusion_coeff * quantum_force_current * self.time_step + eta * (self.backend.sqrt(self.time_step))
 
@@ -80,6 +82,8 @@ class MetropolisHastings(Sampler):
         # Update positions based on acceptance
         new_positions, new_logp, n_accepted = self.accept_fn(n_accepted=n_accepted, accept=accept, initial_positions=initial_positions, proposed_positions=proposed_positions, log_psi_current=prob_current, log_psi_proposed=prob_proposed)
 
+        #print("new_positions", new_positions)
+        
         # Create new state
         new_state = State(positions=new_positions, logp=new_logp, n_accepted=n_accepted, delta=state.delta + 1)
 
@@ -88,7 +92,7 @@ class MetropolisHastings(Sampler):
     def quantum_force(self, positions):
 
         # the quantum force is 2 * the gradient of the log of the wave function
-        
+        #print("grad", self.alg_inst.grad_wf(positions))
         return 2* self.alg_inst.grad_wf(positions)
 
     def greens_function(self, r_old, r_new, F_old, F_new, D, delta_t):
