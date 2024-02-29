@@ -259,7 +259,7 @@ class VMC:
         r: Position array of shape (n_particles, n_dimensions)
         alpha: Parameter(s) of the wavefunction
         """
-
+        print("JAX")
         # Compute the Hessian (second derivative matrix) of the wavefunction
         hessian_psi = jax.jacfwd(self.grad_wf, argnums=0)
         

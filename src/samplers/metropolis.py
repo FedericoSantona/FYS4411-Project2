@@ -33,18 +33,10 @@ class Metropolis(Sampler):
 
 
     def step(self,  n_accepted , wf_squared, state, seed):
-
         """One step of the random walk Metropolis algorithm."""
-
         initial_positions = state.positions
-        #initial_logp = state.logp
-
-
-       
+        #initial_logp = state.logp      
         next_gen = advance_PRNG_state(seed , state.delta)
-
-       
-
         rng = self._rng(next_gen)
 
 
@@ -69,7 +61,8 @@ class Metropolis(Sampler):
 
         # Decide on acceptance
         
-        accept = rng.random(initial_positions.shape[0]) < self.backend.exp(log_accept_prob)
+        # accept = rng.random(initial_positions.shape[0]) < self.backend.exp(log_accept_prob)
+        accept = rng.random(initial_positions.shape[0]) < np.exp(log_accept_prob)
         accept = accept.reshape(-1,1)
 
        
