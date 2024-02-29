@@ -10,17 +10,16 @@ from qs.models.vmc import VMC
 from qs.utils.parameter import Parameter
 
 class Metropolis(Sampler):
-    def __init__(self, alg_inst, rng , scale, n_particles, dim, seed, log, logger=None, logger_level="INFO", backend="Numpy"):
+    def __init__(self, alg_inst, hamiltonian , rng , scale, n_particles, dim, seed, log, logger=None, logger_level="INFO", backend="Numpy"):
         # Initialize the VMC instance
         
         # Initialize Metropolis-specific variables
         self._seed = seed
         self._N = n_particles
         self._dim = dim
-        self._log = log
-        self.alg_inst = alg_inst
+        self.step_method = self.step
 
-        super().__init__(rng, scale, logger, backend)
+        super().__init__(alg_inst , hamiltonian , log,  rng, scale, logger, backend)
 
         if self._backend == "numpy":
             self.accept_fn = self.accept_numpy
@@ -35,7 +34,12 @@ class Metropolis(Sampler):
     def step(self,  n_accepted , wf_squared, state, seed):
         """One step of the random walk Metropolis algorithm."""
         initial_positions = state.positions
+<<<<<<< HEAD
         #initial_logp = state.logp      
+=======
+       
+        #print("initial_positions", initial_positions)
+>>>>>>> 1c6aafde6192b110ed299c98708d73e315179718
         next_gen = advance_PRNG_state(seed , state.delta)
         rng = self._rng(next_gen)
 
@@ -74,6 +78,8 @@ class Metropolis(Sampler):
         #print("initial_positions", initial_positions)   
         #print("new_positions", new_positions)
 
+        
+
         # Create new state
         new_state = State(positions=new_positions, logp=new_logp, n_accepted=n_accepted, delta=state.delta + 1)
 
@@ -82,38 +88,24 @@ class Metropolis(Sampler):
         return new_state 
     
     
-    def accept_jax(self, n_accepted , accept,  initial_positions , proposed_positions ,log_psi_current,  log_psi_proposed):
+    #These should work better
 
-        new_positions = self.backend.zeros_like(initial_positions)
-        new_logp = self.backend.zeros_like(log_psi_current)
-
-        support1 = jnp.matmul(accept.T , proposed_positions)
-        support2 = jnp.matmul(1-accept.T , initial_positions) 
-
-        new_positions = support1 + support2
-
-        n_accepted = jnp.sum(accept)
-
+    def accept_jax(self, n_accepted, accept, initial_positions, proposed_positions, log_psi_current, log_psi_proposed):
+        # Use where to choose between the old and new positions/probabilities based on the accept array
+        new_positions = jnp.where(accept, proposed_positions, initial_positions)
         new_logp = jnp.where(accept, log_psi_proposed, log_psi_current)
-        
-        return  new_positions, new_logp , n_accepted
-    
-    
-    def accept_numpy (self, n_accepted , accept,  initial_positions , proposed_positions ,log_psi_current,  log_psi_proposed):
 
-        new_positions = self.backend.zeros_like(initial_positions)
-        new_logp = self.backend.zeros_like(log_psi_current)
+        # Count the number of accepted moves
+        n_accepted += jnp.sum(accept)
 
-        for i in range(initial_positions.shape[0]):
-            if accept[i]:
-                n_accepted += 1
-                new_positions[i] = proposed_positions[i]
-                new_logp[i] = log_psi_proposed[i]
-            else:
-                new_positions[i] = initial_positions[i]
-                new_logp[i] = log_psi_current[i]
-        
-        return  new_positions, new_logp , n_accepted
-    
-        
-       
+        return new_positions, new_logp, n_accepted
+
+    def accept_numpy(self, n_accepted, accept, initial_positions, proposed_positions, log_psi_current, log_psi_proposed):
+        # accept is a boolean array, so you can use it to index directly
+        new_positions = np.where(accept, proposed_positions, initial_positions)
+        new_logp = np.where(accept, log_psi_proposed, log_psi_current)
+
+        # Count the number of accepted moves
+        n_accepted += np.sum(accept)
+
+        return new_positions, new_logp, n_accepted

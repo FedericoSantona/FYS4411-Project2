@@ -28,7 +28,7 @@ All the parameters you want to change are contained in the file config.py
 """
 # set up the system with its backend and level of logging, seed, and other general properties depending on how you want to run it
 
-alpha_values = np.array([0.2,0.4,0.5,0.6,0.8, 2.5 , 5])
+alpha_values = np.array([ 0.2, 0.3 , 0.4,0.5, 0.6, 0.7 , 0.8, 0.9, 1 ,1.1 , 1.2 ,1.3, 1.4 ,1.5, 1.6])
 energies = []
 variances = []
 error = []
@@ -42,7 +42,10 @@ for i in alpha_values:
     log=True,
     logger_level="INFO",
     seed=config.seed,
-    alpha=i
+    alpha=i,
+    beta=config.beta,
+    time_step=config.time_step,
+    diffusion_coeff=config.diffusion_coeff
     )
 
 
@@ -54,12 +57,12 @@ for i in alpha_values:
     )
 
 
+    # choose the hamiltonian
+    system.set_hamiltonian(type_=config.hamiltonian, int_type="Coulomb", omega=1.0)
+
+
     # choose the sampler algorithm and scale
     system.set_sampler(mcmc_alg=config.mcmc_alg, scale=config.scale)
-    
-
-    # choose the hamiltonian
-    system.set_hamiltonian(type_="ho", int_type="Coulomb", omega=1.0)
 
 
     # choose the optimizer, learning rate, and other properties depending on the optimizer
