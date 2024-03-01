@@ -64,7 +64,9 @@ class HarmonicOscillator(Hamiltonian):
         self.alg_int = alg_int
 
 
-    
+    # I dont think we should use JAX here either - local energy is called repeatedly, and thus not 
+    # easily compiled in JAX. The JNP.arrays should be used _only_ where we can actually run the
+    # JAX JIT compiler. I think it'll potentially reduce the performance of the program otherwise.
     def local_energy(self, wf, r):
         """Local energy of the system
         Calculates the local energy of a system with positions `r` and wavefunction `wf`.

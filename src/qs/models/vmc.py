@@ -5,7 +5,7 @@ import numpy as np
 from jax import device_get
 from qs.utils import Parameter # IMPORTANT: you may or may not use this depending on how you want to implement your code and especially your jax gradient implementation
 from qs.utils import State
-
+import pdb
 
 class VMC:
     def __init__(
@@ -36,8 +36,6 @@ class VMC:
             self._initialize_variational_params() # initialize the variational parameters (ALPHA)
 
         self._initialize_vars(nparticles, dim, log, logger, logger_level)
-
-        self._jit_functions()
 
 
 
@@ -79,6 +77,9 @@ class VMC:
             self.la = jnp.linalg
 
             # Here we overwrite the functions with their jax versions. This is just a suggestion.
+            # These are also the _only_ functions that should be written in JAX code, but should we then
+            # convert back and forth from JAX <-> NumPy arrays throughout the program? 
+            # Need to discuss with Daniel.
             self.grad_wf_closure = self.grad_wf_closure_jax
             self.grads_closure = self.grads_closure_jax
             self.laplacian_closure = self.laplacian_closure_jax
@@ -97,9 +98,9 @@ class VMC:
         functions_to_jit = [
                 "prob_closure",
                 "wf_closure",
-                "grad_wf_closure_jax",
-                "laplacian_closure_jax",
-                "grads_closure_jax",
+                "grad_wf_closure",
+                "laplacian_closure",
+                "grads_closure",
             ]
         
 
@@ -114,7 +115,8 @@ class VMC:
 
         OBS: We strongly recommend you work with the wavefunction in log domain. 
         """
-        alpha = self.params.get("alpha")  # Using Parameter.get to access alpha 
+        alpha = self.params.get("alpha")  # Using Parameter.get to access alpha
+        
         return self.wf_closure(r, alpha)
 
 
@@ -129,7 +131,7 @@ class VMC:
 
         OBS: We strongly recommend you work with the wavefunction in log domain. 
         """
-
+        
         return -alpha * self.backend.sum(r**2, axis=1)  # Sum over the coordinates x^2 + y^2 + z^2 for each particle
     
 
@@ -156,6 +158,7 @@ class VMC:
     def grad_wf_closure(self, r, alpha):
         """
         Computes the gradient of the wavefunction with respect to r analytically
+        Is overwritten by the JAX version if backend is JAX
         """
 
         # The gradient of the Gaussian wavefunction is straightforward:
@@ -252,7 +255,6 @@ class VMC:
         r: Position array of shape (n_particles, n_dimensions)
         alpha: Parameter(s) of the wavefunction
         """
-        print("JAX")
         # Compute the Hessian (second derivative matrix) of the wavefunction
         hessian_psi = jax.jacfwd(self.grad_wf, argnums=0)
         
@@ -265,6 +267,7 @@ class VMC:
         # Reshape the result to have shape (n_particles, 1) as desired
         laplacians = laplacians.reshape(-1, 1)
         
+        # breakpoint()
         #print("laplacian JAX ", laplacians.shape)
 
         return laplacians

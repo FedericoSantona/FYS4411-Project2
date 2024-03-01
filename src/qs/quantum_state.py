@@ -2,8 +2,6 @@
 import sys
 import warnings
 
-sys.path.insert(0, "/mnt/c/Users/annar/OneDrive/Desktop/FYS4411/Project1_python/FYS4411-Template/src")
-
 from qs.utils import errors
 from qs.utils import generate_seed_sequence
 from qs.utils import setup_logger
@@ -117,7 +115,8 @@ class QS:
 
         self.alpha = self.alg.params.get("alpha")
         #activate the jit functions
-        self.alg._jit_functions()
+        # Should not be necessary, since this is called in the INIT phase of the VMC class.
+        # self.alg._jit_functions()
         
 
         if self._wf_type == "vmc":
@@ -163,7 +162,7 @@ class QS:
         if self.mcmc_alg == "m":
             print("The chosen MCMC algorithm is the Metropolis algorithm")
             self.sampler = Metro(  vmc_instance, hami ,  self.rng ,self._scale ,self._N , self._dim, self._seed, self._log,  self.logger , self.logger_level, self._backend) 
-            print
+        
         elif self.mcmc_alg == "mh":
             print("The chosen MCMC algorithm is the Metropolis-Hastings algorithm")
             self.sampler = MetroHastings(  vmc_instance, hami ,  self.rng ,self._scale ,self._N , self._dim, self._seed, self._log,  self.logger , self.logger_level, self._backend, self.time_step, self.diffusion_coeff)
@@ -184,7 +183,7 @@ class QS:
         else:
             raise ValueError("Invalid optimizer type, should be 'gd'")
 
-    
+    # This should be jittable, but this will be looked at when we start working on training.
     def train(self, max_iter,  batch_size, seed ,  **kwargs):
         """
         Train the wave function parameters.
