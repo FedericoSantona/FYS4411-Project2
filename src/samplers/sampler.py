@@ -101,7 +101,7 @@ class Sampler:
         
             E_loc = self.hami.local_energy(self.alg.wf, new_state.positions)
 
-
+            
             #print("this is the local energy" , self._backend,  E_loc.shape)
             
             local_energies.append(E_loc)  # Store local energy 

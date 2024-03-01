@@ -244,8 +244,6 @@ class VMC:
 
         laplacian = laplacian.reshape(-1, 1)  # Reshape to (n_particles, 1)
 
-       # print("laplacian NUMPY ", laplacian.shape)
-      
         return laplacian
 
     def laplacian_closure_jax(self, r, alpha):
@@ -256,21 +254,18 @@ class VMC:
         alpha: Parameter(s) of the wavefunction
         """
         # Compute the Hessian (second derivative matrix) of the wavefunction
-        hessian_psi = jax.jacfwd(self.grad_wf, argnums=0)
-        
+        hessian_psi = jax.hessian(self.wf, argnums=0)
+        d = r.shape
+        r = r.reshape(1, d[0])
         # Apply the Hessian function to the positions to get the second derivatives
-        hessian_matrix = hessian_psi(r)
-        
-        # For each particle, sum the diagonal elements of the Hessian to get the Laplacian
-        laplacians = jnp.array([jnp.trace(hessian_matrix[i]) for i in range(r.shape[0])])
-        
-        # Reshape the result to have shape (n_particles, 1) as desired
-        laplacians = laplacians.reshape(-1, 1)
-        
-        # breakpoint()
-        #print("laplacian JAX ", laplacians.shape)
+        # And calculate the second term (since we are working in the log domain, we square the gradient of the wavefunction)
+        first_term = hessian_psi(r).reshape(d[0], d[0]) # Reshape to (n_particles, n_dimensions, n_dimensions)
+        second_term = self.grad_wf_closure(r, alpha) ** 2
 
-        return laplacians
+        #sum the diagonal elements of the Hessian + the to get the Laplacian
+        laplacian = jnp.array(jnp.trace(first_term) + jnp.sum(second_term))
+
+        return laplacian
 
     def _initialize_vars(self, nparticles, dim, log, logger, logger_level):
         
