@@ -237,6 +237,7 @@ class VMC:
         # print("ANALITICAL")
         # For a Gaussian wavefunction in log domain, the Laplacian is simply 2*alpha*d - 4*alpha^2*sum(r_i^2),
         # where d is the number of dimensions.
+        r = r.reshape(-1, self._dim)  # Reshape to (n_particles, n_dimensions)
         d = r.shape[1]  # Number of dimensions
         r2 =  self.backend.sum(r**2, axis=1)
         

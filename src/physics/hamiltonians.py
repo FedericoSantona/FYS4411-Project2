@@ -120,7 +120,12 @@ class EllipticOscillator(HarmonicOscillator):
 
         #print(" laplacian shape ", self.backend.sum(self.alg_int.laplacian(r)).shape)
 
-        laplacian = self.backend.sum(self.alg_int.laplacian(r))
+        #laplacian = self.backend.sum(self.alg_int.laplacian(r)) this was more efficient tho :(
+        
+        laplacian = 0
+        for i in range(self._N):
+            laplacian += self.backend.sum(self.alg_int.laplacian(r[i]))
+        
         
         # Correct calculation of local energy
         local_energy = -0.5 * laplacian + pe
