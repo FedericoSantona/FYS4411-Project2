@@ -58,10 +58,12 @@ class MetropolisHastings(Sampler):
         rng = self._rng(next_gen)
 
         # Generate a proposal move
-        eta = rng.normal(loc= initial_positions , scale = self.scale)
+        eta = rng.normal(loc= 0 , scale = self.scale)
 
         proposed_positions = initial_positions + self.diffusion_coeff * quantum_force_current * self.time_step + eta * (self.backend.sqrt(self.time_step))
 
+        
+        
         # Calculate the quantum force for the proposed positions
         quantum_force_proposed = self.quantum_force(proposed_positions)
 
@@ -69,21 +71,23 @@ class MetropolisHastings(Sampler):
         prob_current = wf_squared(initial_positions)
         prob_proposed = wf_squared(proposed_positions)
 
-        # Calculate the Greens function for acceptance probability
-        G_forward , G_reverse = self.greens_function(initial_positions, proposed_positions, quantum_force_current, quantum_force_proposed, self.diffusion_coeff, self.time_step)
+        # Calculate the q value
+        q_value = self.q_value(initial_positions, proposed_positions, quantum_force_current, quantum_force_proposed, self.diffusion_coeff, self.time_step, prob_current, prob_proposed)
+        
+        #print("q_value", q_value.shape)
 
-        # Calculate acceptance probability in log domain
-        log_accept_prob = prob_proposed + G_reverse - prob_current - G_forward
-
+        q_value = self.backend.sum(q_value, axis=1)
+        
         # Decide on acceptance
-        accept = rng.random(initial_positions.shape[0]) < self.backend.exp(log_accept_prob)
+        accept = rng.random(initial_positions.shape[0]) <  self.backend.exp(q_value)
         accept = accept.reshape(-1, 1)
 
+        
+
+       
         # Update positions based on acceptance
         new_positions, new_logp, n_accepted = self.accept_func(n_accepted=n_accepted, accept=accept, initial_positions=initial_positions, proposed_positions=proposed_positions, log_psi_current=prob_current, log_psi_proposed=prob_proposed)
 
-        #print("new_positions", new_positions)
-        
         # Create new state
         new_state = State(positions=new_positions, logp=new_logp, n_accepted=n_accepted, delta=state.delta + 1)
 
@@ -95,20 +99,26 @@ class MetropolisHastings(Sampler):
         #print("grad", self.alg_inst.grad_wf(positions))
         return 2* self.alg_inst.grad_wf(positions)
 
-    def greens_function(self, r_old, r_new, F_old, F_new, D, delta_t):
-        # Calculate the drift terms
-        drift_old = D * F_old * delta_t
-        drift_new = D * F_new * delta_t
+    def q_value(self, r_old, r_new, F_old, F_new, D, delta_t , wf2_old, wf2_new):
 
-        # Compute the squared distance terms for the forward and reverse moves
-        forward_move = self.backend.linalg.norm(r_new - r_old - drift_old)**2
-        reverse_move = self.backend.linalg.norm(r_old - r_new - drift_new)**2
 
-        # Compute the Green's functions for the forward and reverse moves in the log domain
-        G_forward = -forward_move / (4 * D * delta_t)
-        G_reverse = -reverse_move / (4 * D * delta_t)
+        beta = r_old - r_new
+        """
+        squared_term = D*delta_t*0.25 * ( F_new**2 - F_old**2)
 
-        return G_forward, G_reverse
+        linear_term = - 0.5 * beta*  (F_new + F_old)
+
+        wf_term = +(wf2_new - wf2_old)
+
+        """
+
+
+        alpha = self.alg_inst.params.get("alpha")
+         
+        q = (-(beta + D *delta_t * F_old)**2 + (beta - D *delta_t * F_new)**2 )/ (4*delta_t*D)  - alpha * (r_new**2 - r_old**2)
+
+
+        return q #squared_term + linear_term + wf_term
     
     def accept_func(self, n_accepted, accept, initial_positions, proposed_positions, log_psi_current, log_psi_proposed):
         # accept is a boolean array, so you can use it to index directly
