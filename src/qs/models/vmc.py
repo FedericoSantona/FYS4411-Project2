@@ -29,7 +29,7 @@ class VMC:
         self._logger = logger
         self._N = nparticles             
         self.rng = random.PRNGKey(self._seed)  # Initialize RNG with the provided seed
-
+        
         if alpha:
             self._initialize_variational_params(alpha)
         else:
@@ -99,7 +99,7 @@ class VMC:
                 "prob_closure",
                 "wf_closure",
                 "grad_wf_closure",
-                "laplacian_closure",
+                # "laplacian_closure",
                 "grads_closure",
             ]
         
@@ -255,16 +255,24 @@ class VMC:
         """
         # Compute the Hessian (second derivative matrix) of the wavefunction
         hessian_psi = jax.hessian(self.wf, argnums=0)
-        d = r.shape
-        r = r.reshape(1, d[0])
+        d = r.shape[1]
+        r  =r.reshape(self._N,d)
         # Apply the Hessian function to the positions to get the second derivatives
         # And calculate the second term (since we are working in the log domain, we square the gradient of the wavefunction)
-        first_term = hessian_psi(r).reshape(d[0], d[0]) # Reshape to (n_particles, n_dimensions, n_dimensions)
-        second_term = self.grad_wf_closure(r, alpha) ** 2
+        # WE SHOULD USE .RAVEL() TO FIX THIS SHIT
+        laplacian = 0
+        #breakpoint()
+        L = jax.lax.fori_loop(0, self._N, lambda i, laplacian: laplacian + 
+                              jnp.trace(hessian_psi(jnp.array([r[i]])).reshape(d, d)) + jnp.sum(self.grad_wf_closure(jnp.array([r[i]]), alpha) ** 2), 0
+                              ) 
+        
+        # first_term = hessian_psi(r).reshape(d[0], d[0]) # Reshape to (n_particles, n_dimensions, n_dimensions)
+        # second_term = self.grad_wf_closure(r, alpha) ** 2
 
-        #sum the diagonal elements of the Hessian + the to get the Laplacian
-        laplacian = jnp.array(jnp.trace(first_term) + jnp.sum(second_term))
-
+        # #sum the diagonal elements of the Hessian + the to get the Laplacian
+        # laplacian = jnp.array(jnp.trace(first_term) + jnp.sum(second_term))
+        breakpoint()
+        return L
         return laplacian
 
     def _initialize_vars(self, nparticles, dim, log, logger, logger_level):

@@ -81,14 +81,14 @@ class HarmonicOscillator(Hamiltonian):
         # This is done to make the JAX implementation work, but should most def be corrected at some point
         # I think it would be faster if we were successful in vectorizing the array of positions inside the 
         # compiled laplacian function.
+
+        # laplacian = 0
+        # for i in range(self._N):
+        #     laplacian += self.backend.sum(self.alg_int.laplacian(r[i]))
         
-        laplacian = 0
-        for i in range(self._N):
-            laplacian += self.backend.sum(self.alg_int.laplacian(r[i]))
         
         
-        
-        #laplacian = self.backend.sum(self.alg_int.laplacian(r))
+        laplacian = self.backend.sum(self.alg_int.laplacian(r))
         
         # Correct calculation of local energy
         local_energy = -0.5 * laplacian + pe
