@@ -80,7 +80,7 @@ class MetropolisHastings(Sampler):
         accept = accept.reshape(-1, 1)
 
         # Update positions based on acceptance
-        new_positions, new_logp, n_accepted = self.accept_fn(n_accepted=n_accepted, accept=accept, initial_positions=initial_positions, proposed_positions=proposed_positions, log_psi_current=prob_current, log_psi_proposed=prob_proposed)
+        new_positions, new_logp, n_accepted = self.accept_func(n_accepted=n_accepted, accept=accept, initial_positions=initial_positions, proposed_positions=proposed_positions, log_psi_current=prob_current, log_psi_proposed=prob_proposed)
 
         #print("new_positions", new_positions)
         
@@ -109,8 +109,19 @@ class MetropolisHastings(Sampler):
         G_reverse = -reverse_move / (4 * D * delta_t)
 
         return G_forward, G_reverse
+    
+    def accept_func(self, n_accepted, accept, initial_positions, proposed_positions, log_psi_current, log_psi_proposed):
+        # accept is a boolean array, so you can use it to index directly
+        new_positions = np.where(accept, proposed_positions, initial_positions)
+        new_logp = np.where(accept, log_psi_proposed, log_psi_current)
+
+        # Count the number of accepted moves
+        n_accepted += np.sum(accept)
+
+        return new_positions, new_logp, n_accepted
 
 
+"""
     def accept_jax(self, n_accepted, accept, initial_positions, proposed_positions, log_psi_current, log_psi_proposed):
             # Use where to choose between the old and new positions/probabilities based on the accept array
             new_positions = jnp.where(accept, proposed_positions, initial_positions)
@@ -131,4 +142,6 @@ class MetropolisHastings(Sampler):
 
         return new_positions, new_logp, n_accepted
         
-       
+"""
+
+    
