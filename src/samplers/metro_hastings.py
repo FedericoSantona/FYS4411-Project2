@@ -14,7 +14,7 @@ from qs.utils.parameter import Parameter
 
 
 class MetropolisHastings(Sampler):
-    def __init__(self, alg_inst, hamiltonian, rng, scale, n_particles, dim, seed, log, logger=None, logger_level="INFO", backend="Numpy", time_step=0.01, diffusion_coeff=0.5):
+    def __init__(self, alg_inst, hamiltonian, rng, scale, n_particles, dim, seed, log, logger=None, logger_level="INFO", backend="numpy", time_step=0.01, diffusion_coeff=0.5):
         
         self.time_step = time_step
         self.diffusion_coeff = diffusion_coeff
@@ -58,11 +58,13 @@ class MetropolisHastings(Sampler):
         rng = self._rng(next_gen)
 
         # Generate a proposal move
-        eta = rng.normal(loc= 0 , scale = self.scale)
+        #eta = rng.normal(loc= 0 , scale = self.scale)
+        eta = rng.normal(loc=0, scale=self.scale, size=(initial_positions.shape[0], 1))
+
 
         proposed_positions = initial_positions + self.diffusion_coeff * quantum_force_current * self.time_step + eta * (self.backend.sqrt(self.time_step))
-
         
+        #print("proposed_positions", proposed_positions)
         
         # Calculate the quantum force for the proposed positions
         quantum_force_proposed = self.quantum_force(proposed_positions)
@@ -75,18 +77,18 @@ class MetropolisHastings(Sampler):
         q_value = self.q_value(initial_positions, proposed_positions, quantum_force_current, quantum_force_proposed, self.diffusion_coeff, self.time_step, prob_current, prob_proposed)
         
         #print("q_value", q_value.shape)
-
-        q_value = self.backend.sum(q_value, axis=1)
         
         # Decide on acceptance
         accept = rng.random(initial_positions.shape[0]) <  self.backend.exp(q_value)
         accept = accept.reshape(-1, 1)
 
-        
+       # print("accept", accept)
 
-       
         # Update positions based on acceptance
         new_positions, new_logp, n_accepted = self.accept_func(n_accepted=n_accepted, accept=accept, initial_positions=initial_positions, proposed_positions=proposed_positions, log_psi_current=prob_current, log_psi_proposed=prob_proposed)
+        
+        #print("new_positions", new_positions)
+
 
         # Create new state
         new_state = State(positions=new_positions, logp=new_logp, n_accepted=n_accepted, delta=state.delta + 1)
@@ -98,28 +100,27 @@ class MetropolisHastings(Sampler):
         # the quantum force is 2 * the gradient of the log of the wave function
         #print("grad", self.alg_inst.grad_wf(positions))
         return 2* self.alg_inst.grad_wf(positions)
+    
 
     def q_value(self, r_old, r_new, F_old, F_new, D, delta_t , wf2_old, wf2_new):
 
 
-        beta = r_old - r_new
-        """
-        squared_term = D*delta_t*0.25 * ( F_new**2 - F_old**2)
+        beta = r_new - r_old
 
-        linear_term = - 0.5 * beta*  (F_new + F_old)
+        squared_term = D*delta_t*0.25 *(self.backend.sum(F_old**2 , axis=1 ) - self.backend.sum(F_new**2 , axis = 1))
 
-        wf_term = +(wf2_new - wf2_old)
-
-        """
+        #THE PROBLEM HERE IS HOW WE SUM THE BETA*F BECAUSE WE NEED TO REDUCE 
+        #THE DIMENSIONALITY TO ( N PARTICLES, 1) BUT WE HAVE TO FIND A WAY THAT 
+        # MAKES SENSE DO IT 
 
 
-        alpha = self.alg_inst.params.get("alpha")
-         
-        q = (-(beta + D *delta_t * F_old)**2 + (beta - D *delta_t * F_new)**2 )/ (4*delta_t*D)  - alpha * (r_new**2 - r_old**2)
+        linear_term = 0.5 *self.backend.sum(beta * (F_new + F_old), axis= 1)
 
+        q_value =  squared_term - linear_term  + wf2_new - wf2_old
 
-        return q #squared_term + linear_term + wf_term
+        return  q_value 
     
+
     def accept_func(self, n_accepted, accept, initial_positions, proposed_positions, log_psi_current, log_psi_proposed):
         # accept is a boolean array, so you can use it to index directly
         new_positions = np.where(accept, proposed_positions, initial_positions)
