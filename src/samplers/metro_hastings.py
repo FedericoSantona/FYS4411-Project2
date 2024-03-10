@@ -105,7 +105,24 @@ class MetropolisHastings(Sampler):
         #print("grad", self.alg_inst.grad_wf(positions))
         return 2* self.alg_inst.grad_wf(positions)
     
+    def GreenFunction(self, r_new, r_old, F_new, D, delta_t):
 
+        v = r_old - r_new - D*delta_t*F_new
+
+        return  - self.backend.sum(v**2, axis=1) /( D*delta_t * 4)    
+    
+
+    def q_value(self, r_old, r_new, F_old, F_new, D, delta_t , wf2_old, wf2_new):
+
+        G_forward = self.GreenFunction(r_new, r_old, F_new, D, delta_t)
+        G_backward = self.GreenFunction(r_old, r_new, F_old, D, delta_t)
+
+        q_value = G_forward - G_backward + wf2_new - wf2_old
+
+        return  q_value
+
+
+    """
     def q_value(self, r_old, r_new, F_old, F_new, D, delta_t , wf2_old, wf2_new):
 
 
@@ -123,7 +140,8 @@ class MetropolisHastings(Sampler):
         q_value =  squared_term - linear_term  + wf2_new - wf2_old
 
         return  q_value 
-    
+
+    """
 
     def accept_func(self, n_accepted, accept, initial_positions, proposed_positions, log_psi_current, log_psi_proposed):
         # accept is a boolean array, so you can use it to index directly

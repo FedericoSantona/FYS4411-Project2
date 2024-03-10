@@ -83,6 +83,7 @@ class VMC:
             self.grad_wf_closure = self.grad_wf_closure_jax
             self.grads_closure = self.grads_closure_jax
             self.laplacian_closure = self.laplacian_closure_jax
+            self.grads_E_loc_closure = self.grads_E_loc_closure_jax
             self._jit_functions()
         else:
             raise ValueError(f"Backend {self.backend} not supported")
@@ -141,6 +142,7 @@ class VMC:
 
         OBS: We strongly recommend you work with the wavefunction in log domain. 
         """
+        
         
         log_psi = self.wf_closure(r, alpha)
         return 2 * log_psi  # Since we're working in the log domain
@@ -219,6 +221,45 @@ class VMC:
         grad_alpha = grad_alpha_fn(alpha)
         return grad_alpha
 
+    
+    def grads_E_loc(self, r):
+
+        """
+        Helper for the gradient of the Local  energy  within respect to the variational parameter
+
+        """
+        alpha = self.params.get("alpha")
+
+        return self.grads_E_loc_closure(r, alpha)
+    
+    def grads_E_loc_closure(self, r, alpha):
+        """
+        Computes the gradient of the laplacian of the wavefunction with respect to the variational parameters analytically
+        """
+        
+        r = r.reshape(-1, self._dim)  # Reshape to (n_particles, n_dimensions)
+        d = r.shape[1]  # Number of dimensions
+
+        r2 =  self.backend.sum(r**2, axis=1)
+
+        grad_laplacian = 8*alpha * r2- 2*d
+        
+        return -0.5 *grad_laplacian
+    
+    def grads_E_loc_closure_jax(self, r, alpha):
+
+        """
+        Computes the gradient of the laplacian of the wavefunction with respect to the variational parameters with JAX grad.
+        """
+          # Ensure `r` is correctly shaped for JAX operations
+        r = jnp.reshape(r, newshape=(-1, self._dim))  # Example reshape, adjust `dim` as necessary
+    
+        grad_fn = jax.grad(self.laplacian_closure_jax, argnums=1)
+
+        grad_E = - 0.5* grad_fn(r, alpha)
+
+        return grad_E
+    
     def laplacian(self, r):
         """
         Return a function that computes the laplacian of the wavefunction ∇^2 Ψ(r)
@@ -227,8 +268,11 @@ class VMC:
         """
        
         alpha = self.params.get("alpha")  # Using Parameter.get to access alpha 
-        
+
+       # print("alpha inside LAPLACIAN ", alpha)
         return self.laplacian_closure(r, alpha)
+    
+
 
     def laplacian_closure(self, r, alpha):
         """
@@ -289,6 +333,7 @@ class VMC:
         # Note: We split the RNG key to ensure subsequent uses of RNG don't reuse the same state.
         key, subkey = random.split(self.rng)
         initial_positions = random.normal(subkey, (nparticles, dim))  # Using JAX for random numbers
+
 
         # Initialize logp, assuming a starting value or computation
         a = self.params.get("alpha")  # Using Parameter.get to access alpha

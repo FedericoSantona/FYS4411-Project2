@@ -211,23 +211,31 @@ class QS:
         
 
         for iteration in t_range:
-
            
             # Sample data in batches
             _, sampled_positions, local_energies = self.sample(nsamples=batch_size, nchains=1, seed=seed)
             
             # Compute gradients for the batch
-            grads_alpha = self.alg.grads(sampled_positions) 
-            
+            grads_alpha = self.backend.mean(self.alg.grads_E_loc(sampled_positions)) 
+
+            grads_alpha = grads_alpha.reshape(-1 , 1)
 
             # Update alpha using the computed gradients and the optimizer
-            self.alpha = self.backend.array(self._optimizer.step(self.alpha, grads_alpha))
+            #self.alpha = self.backend.array(self._optimizer.step(self.alpha, grads_alpha))
+            # Ensure alpha and its gradient are iterables
+            self.alpha = self.backend.array(self._optimizer.step([self.alpha], [grads_alpha]))[0]
 
-            #self.alg.params["alpha"] = self.alpha
+
+            print("Alpha druing training", self.alpha)
+           
+            # Update the alpha in the Parameter instance
+            self.alg.params.set("alpha", self.alpha)
 
               
             
         self._is_trained_ = True
+        print("Alpha after training", self.alpha)
+
         if self.logger is not None:
             self.logger.info("Training done")
 
