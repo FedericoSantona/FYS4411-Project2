@@ -271,6 +271,41 @@ class QS:
         return self._results, sampled_positions, local_energies
     
 
+    def bootstrap(self,X):
+        """"Here we write the bootstrap method, should take in the array of local energies calculated from the 
+            sample member function of quantum states.
+
+            Input:(X) 1D array of elements 
+
+            Return:(X_boot_mean) retunrns the mean of the bootstrapped input array   
+        """
+        
+        self.X = X
+        nstraps = len(X)
+
+        X_strap = np.random.choice(X,size = nstraps)
+        
+        
+        return np.mean(X_strap)
+    
+    def superBoot(self,X,n):
+        """
+            This function takes n bootstraps and takes the mean of the output of all bootstraps
+
+            Input: (X) 1D array of elements we wish to bootstrap
+                   (n) number of times we wish to bootstrap
+            
+            Return: mean of all bootstrap means
+        """
+        self._n = n
+        self._X = X
+        meanE = []
+
+        for _ in range(n):
+            meanE.append(self.bootstrap(self._X))
+        
+        return np.mean(meanE)
+
     def _is_initialized(self):
         if not self._is_initialized_:
             msg = "A call to 'init' must be made before training"

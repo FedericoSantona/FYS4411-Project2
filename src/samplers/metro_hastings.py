@@ -47,7 +47,9 @@ class MetropolisHastings(Sampler):
 
 
         initial_positions = state.positions
-       
+        
+
+
         #print("initial_positions", initial_positions)
 
         # Use the current positions to generate the quantum force
@@ -59,7 +61,7 @@ class MetropolisHastings(Sampler):
 
         # Generate a proposal move
         #eta = rng.normal(loc= 0 , scale = self.scale)
-        eta = rng.normal(loc=0, scale=self.scale, size=(initial_positions.shape[0], 1))
+        eta = rng.normal(loc=0, scale=1, size=(self._N, self._dim))
 
 
         proposed_positions = initial_positions + self.diffusion_coeff * quantum_force_current * self.time_step + eta * (self.backend.sqrt(self.time_step))
@@ -74,12 +76,14 @@ class MetropolisHastings(Sampler):
         prob_proposed = wf_squared(proposed_positions)
 
         # Calculate the q value
-        q_value = self.q_value(initial_positions, proposed_positions, quantum_force_current, quantum_force_proposed, self.diffusion_coeff, self.time_step, prob_current, prob_proposed)
         
+        
+        q_value = self.q_value(initial_positions, proposed_positions, quantum_force_current, quantum_force_proposed, self.diffusion_coeff, self.time_step, prob_current, prob_proposed)
+        #breakpoint()
         #print("q_value", q_value.shape)
         
         # Decide on acceptance
-        accept = rng.random(initial_positions.shape[0]) <  self.backend.exp(q_value)
+        accept = rng.random(self._N) <  self.backend.exp(q_value)
         accept = accept.reshape(-1, 1)
 
        # print("accept", accept)
@@ -106,16 +110,16 @@ class MetropolisHastings(Sampler):
 
 
         beta = r_new - r_old
-
+        
         squared_term = D*delta_t*0.25 *(self.backend.sum(F_old**2 , axis=1 ) - self.backend.sum(F_new**2 , axis = 1))
 
         #THE PROBLEM HERE IS HOW WE SUM THE BETA*F BECAUSE WE NEED TO REDUCE 
         #THE DIMENSIONALITY TO ( N PARTICLES, 1) BUT WE HAVE TO FIND A WAY THAT 
         # MAKES SENSE DO IT 
 
-
+        
         linear_term = 0.5 *self.backend.sum(beta * (F_new + F_old), axis= 1)
-
+        
         q_value =  squared_term - linear_term  + wf2_new - wf2_old
 
         return  q_value 
