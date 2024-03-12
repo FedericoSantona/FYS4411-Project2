@@ -14,7 +14,7 @@ from qs.utils.parameter import Parameter
 
 
 class MetropolisHastings(Sampler):
-    def __init__(self, alg_inst, hamiltonian, rng, scale, n_particles, dim, seed, log, logger=None, logger_level="INFO", backend="Numpy", time_step=0.01, diffusion_coeff=0.5):
+    def __init__(self, alg_inst, hamiltonian, rng, scale, n_particles, dim, seed, log, logger=None, logger_level="INFO", backend="numpy", time_step=0.01, diffusion_coeff=0.5):
         
         self.time_step = time_step
         self.diffusion_coeff = diffusion_coeff
@@ -47,7 +47,9 @@ class MetropolisHastings(Sampler):
 
 
         initial_positions = state.positions
-       
+        
+
+
         #print("initial_positions", initial_positions)
 
         # Use the current positions to generate the quantum force
@@ -58,10 +60,14 @@ class MetropolisHastings(Sampler):
         rng = self._rng(next_gen)
 
         # Generate a proposal move
-        eta = rng.normal(loc= initial_positions , scale = self.scale)
+        #eta = rng.normal(loc= 0 , scale = self.scale)
+        eta = rng.normal(loc=0, scale=1, size=(self._N, self._dim))
+
 
         proposed_positions = initial_positions + self.diffusion_coeff * quantum_force_current * self.time_step + eta * (self.backend.sqrt(self.time_step))
-
+        
+        #print("proposed_positions", proposed_positions)
+        
         # Calculate the quantum force for the proposed positions
         quantum_force_proposed = self.quantum_force(proposed_positions)
 
@@ -69,21 +75,25 @@ class MetropolisHastings(Sampler):
         prob_current = wf_squared(initial_positions)
         prob_proposed = wf_squared(proposed_positions)
 
-        # Calculate the Greens function for acceptance probability
-        G_forward , G_reverse = self.greens_function(initial_positions, proposed_positions, quantum_force_current, quantum_force_proposed, self.diffusion_coeff, self.time_step)
-
-        # Calculate acceptance probability in log domain
-        log_accept_prob = prob_proposed + G_reverse - prob_current - G_forward
-
+        # Calculate the q value
+        
+        
+        q_value = self.q_value(initial_positions, proposed_positions, quantum_force_current, quantum_force_proposed, self.diffusion_coeff, self.time_step, prob_current, prob_proposed)
+        #breakpoint()
+        #print("q_value", q_value.shape)
+        
         # Decide on acceptance
-        accept = rng.random(initial_positions.shape[0]) < self.backend.exp(log_accept_prob)
+        accept = rng.random(self._N) <  self.backend.exp(q_value)
         accept = accept.reshape(-1, 1)
+
+       # print("accept", accept)
 
         # Update positions based on acceptance
         new_positions, new_logp, n_accepted = self.accept_func(n_accepted=n_accepted, accept=accept, initial_positions=initial_positions, proposed_positions=proposed_positions, log_psi_current=prob_current, log_psi_proposed=prob_proposed)
-
-        #print("new_positions", new_positions)
         
+        #print("new_positions", new_positions)
+
+
         # Create new state
         new_state = State(positions=new_positions, logp=new_logp, n_accepted=n_accepted, delta=state.delta + 1)
 
@@ -94,22 +104,45 @@ class MetropolisHastings(Sampler):
         # the quantum force is 2 * the gradient of the log of the wave function
         #print("grad", self.alg_inst.grad_wf(positions))
         return 2* self.alg_inst.grad_wf(positions)
-
-    def greens_function(self, r_old, r_new, F_old, F_new, D, delta_t):
-        # Calculate the drift terms
-        drift_old = D * F_old * delta_t
-        drift_new = D * F_new * delta_t
-
-        # Compute the squared distance terms for the forward and reverse moves
-        forward_move = self.backend.linalg.norm(r_new - r_old - drift_old)**2
-        reverse_move = self.backend.linalg.norm(r_old - r_new - drift_new)**2
-
-        # Compute the Green's functions for the forward and reverse moves in the log domain
-        G_forward = -forward_move / (4 * D * delta_t)
-        G_reverse = -reverse_move / (4 * D * delta_t)
-
-        return G_forward, G_reverse
     
+    def GreenFunction(self, r_new, r_old, F_new, D, delta_t):
+
+        v = r_old - r_new - D*delta_t*F_new
+
+        return  - self.backend.sum(v**2, axis=1) /( D*delta_t * 4)    
+    
+
+    def q_value(self, r_old, r_new, F_old, F_new, D, delta_t , wf2_old, wf2_new):
+
+        G_forward = self.GreenFunction(r_new, r_old, F_new, D, delta_t)
+        G_backward = self.GreenFunction(r_old, r_new, F_old, D, delta_t)
+
+        q_value = G_forward - G_backward + wf2_new - wf2_old
+
+        return  q_value
+
+
+    """
+    def q_value(self, r_old, r_new, F_old, F_new, D, delta_t , wf2_old, wf2_new):
+
+
+        beta = r_new - r_old
+        
+        squared_term = D*delta_t*0.25 *(self.backend.sum(F_old**2 , axis=1 ) - self.backend.sum(F_new**2 , axis = 1))
+
+        #THE PROBLEM HERE IS HOW WE SUM THE BETA*F BECAUSE WE NEED TO REDUCE 
+        #THE DIMENSIONALITY TO ( N PARTICLES, 1) BUT WE HAVE TO FIND A WAY THAT 
+        # MAKES SENSE DO IT 
+
+        
+        linear_term = 0.5 *self.backend.sum(beta * (F_new + F_old), axis= 1)
+        
+        q_value =  squared_term - linear_term  + wf2_new - wf2_old
+
+        return  q_value 
+
+    """
+
     def accept_func(self, n_accepted, accept, initial_positions, proposed_positions, log_psi_current, log_psi_proposed):
         # accept is a boolean array, so you can use it to index directly
         new_positions = np.where(accept, proposed_positions, initial_positions)

@@ -211,23 +211,31 @@ class QS:
         
 
         for iteration in t_range:
-
            
             # Sample data in batches
             _, sampled_positions, local_energies = self.sample(nsamples=batch_size, nchains=1, seed=seed)
             
             # Compute gradients for the batch
-            grads_alpha = self.alg.grads(sampled_positions) 
-            
+            grads_alpha = self.backend.mean(self.alg.grads_E_loc(sampled_positions)) 
+
+            grads_alpha = grads_alpha.reshape(-1 , 1)
 
             # Update alpha using the computed gradients and the optimizer
-            self.alpha = self.backend.array(self._optimizer.step(self.alpha, grads_alpha))
+            #self.alpha = self.backend.array(self._optimizer.step(self.alpha, grads_alpha))
+            # Ensure alpha and its gradient are iterables
+            self.alpha = self.backend.array(self._optimizer.step([self.alpha], [grads_alpha]))[0]
 
-            #self.alg.params["alpha"] = self.alpha
+
+            print("Alpha druing training", self.alpha)
+           
+            # Update the alpha in the Parameter instance
+            self.alg.params.set("alpha", self.alpha)
 
               
             
         self._is_trained_ = True
+        print("Alpha after training", self.alpha)
+
         if self.logger is not None:
             self.logger.info("Training done")
 
@@ -270,6 +278,41 @@ class QS:
 
         return self._results, sampled_positions, local_energies
     
+
+    def bootstrap(self,X):
+        """"Here we write the bootstrap method, should take in the array of local energies calculated from the 
+            sample member function of quantum states.
+
+            Input:(X) 1D array of elements 
+
+            Return:(X_boot_mean) retunrns the mean of the bootstrapped input array   
+        """
+        
+        self.X = X
+        nstraps = len(X)
+
+        X_strap = np.random.choice(X,size = nstraps)
+        
+        
+        return np.mean(X_strap)
+    
+    def superBoot(self,X,n):
+        """
+            This function takes n bootstraps and takes the mean of the output of all bootstraps
+
+            Input: (X) 1D array of elements we wish to bootstrap
+                   (n) number of times we wish to bootstrap
+            
+            Return: mean of all bootstrap means
+        """
+        self._n = n
+        self._X = X
+        meanE = []
+
+        for _ in range(n):
+            meanE.append(self.bootstrap(self._X))
+        
+        return np.mean(meanE)
 
     def _is_initialized(self):
         if not self._is_initialized_:

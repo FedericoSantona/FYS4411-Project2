@@ -49,6 +49,7 @@ class Metropolis(Sampler):
                                                             initial_positions=initial_positions , proposed_positions=proposed_positions,
                                                             log_psi_current=prob_current,  log_psi_proposed=prob_proposed)
         
+       
         # Create new state
         new_state = State(positions=new_positions, logp=new_logp, n_accepted=n_accepted, delta=state.delta + 1)
 

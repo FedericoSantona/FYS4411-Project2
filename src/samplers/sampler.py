@@ -90,6 +90,8 @@ class Sampler:
 
             #print( "position BEFORE ", self.alg.state.positions)
             new_state  = self.step(total_accepted, self.alg.prob, self.alg.state, self._seed )
+
+           
             
             total_accepted = new_state.n_accepted
 
@@ -100,6 +102,7 @@ class Sampler:
             # Calculate the local energy
         
             E_loc = self.hami.local_energy(self.alg.wf, new_state.positions)
+
 
             
             #print("this is the local energy" , self._backend,  E_loc.shape)
@@ -120,13 +123,22 @@ class Sampler:
 
         local_energies = self.backend.array(local_energies)
 
+        sampled_positions = self.backend.array(sampled_positions)
+
+        mean_positions = self.backend.mean(self.backend.abs(sampled_positions), axis=0)
+
+        #print("mean_positions", mean_positions)
 
         #print("local_energies", local_energies)
 
         # Compute statistics of local energies
         mean_energy = self.backend.mean(local_energies)
         std_error = self.backend.std(local_energies) / self.backend.sqrt(nsamples)
-        variance = self.backend.var(local_energies)                 
+        variance = self.backend.var(local_energies)  
+
+        #print( "alpha IN THE SAMPLER", self.alg.params.get("alpha"))
+
+        print("mean_energy", mean_energy)           
                                         
         # calculate energy, error, variance, acceptance rate, and other things you want to display in the results
 
