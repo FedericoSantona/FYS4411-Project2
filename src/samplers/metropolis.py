@@ -9,57 +9,79 @@ from .sampler import Sampler
 from qs.models.vmc import VMC
 from qs.utils.parameter import Parameter
 
+
 class Metropolis(Sampler):
-    def __init__(self, alg_inst, hamiltonian , rng , scale, n_particles, dim, seed, log, logger=None, logger_level="INFO", backend="Numpy"):
+    def __init__(
+        self,
+        alg_inst,
+        hamiltonian,
+        rng,
+        scale,
+        n_particles,
+        dim,
+        seed,
+        log,
+        logger=None,
+        logger_level="INFO",
+        backend="Numpy",
+    ):
         # Initialize the VMC instance
-        
         # Initialize Metropolis-specific variables
         self._seed = seed
         self._N = n_particles
         self._dim = dim
         self.step_method = self.step
 
-        super().__init__(alg_inst , hamiltonian , log,  rng, scale, logger, backend)
+        super().__init__(alg_inst, hamiltonian, log, rng, scale, logger, backend)
 
-
-    def step(self,  n_accepted , wf_squared, state, seed):
+    def step(self, n_accepted, wf_squared, state, seed):
         """One step of the random walk Metropolis algorithm."""
         initial_positions = state.positions
-        #initial_logp = state.logp      
-       
-        #print("initial_positions", initial_positions)
-        next_gen = advance_PRNG_state(seed , state.delta)
+        next_gen = advance_PRNG_state(seed, state.delta)
         rng = self._rng(next_gen)
-
-
         # Generate a proposal move
-        proposed_positions = rng.normal(loc= initial_positions , scale =  self.scale)
-       
+        proposed_positions = rng.normal(loc=initial_positions, scale=self.scale)
         # Calculate log probability densities for current and proposed positions
         prob_current = wf_squared(initial_positions)
         prob_proposed = wf_squared(proposed_positions)
         # Calculate acceptance probability in log domain
-        log_accept_prob = (prob_proposed - prob_current)
+        log_accept_prob = prob_proposed - prob_current
         # Decide on acceptance
-        
         # accept = rng.random(initial_positions.shape[0]) < self.backend.exp(log_accept_prob)
-        accept = rng.random(initial_positions.shape[0]) < np.exp(log_accept_prob)               # Refrain from using Jax function outside jitcompiled code
-        accept = accept.reshape(-1,1)
-        new_positions ,new_logp , n_accepted = self.accept_func(n_accepted=n_accepted , accept=accept,  
-                                                            initial_positions=initial_positions , proposed_positions=proposed_positions,
-                                                            log_psi_current=prob_current,  log_psi_proposed=prob_proposed)
-        
-       
-        # Create new state
-        new_state = State(positions=new_positions, logp=new_logp, n_accepted=n_accepted, delta=state.delta + 1)
+        accept = rng.random(initial_positions.shape[0]) < np.exp(log_accept_prob)  # Refrain from using Jax function outside jitcompiled code
+        accept = accept.reshape(-1, 1)
+        new_positions, new_logp, n_accepted = self.accept_func(
+            n_accepted=n_accepted,
+            accept=accept,
+            initial_positions=initial_positions,
+            proposed_positions=proposed_positions,
+            log_psi_current=prob_current,
+            log_psi_proposed=prob_proposed,
+        )
 
-        return new_state 
+        # Create new state
+        new_state = State(
+            positions=new_positions,
+            logp=new_logp,
+            n_accepted=n_accepted,
+            delta=state.delta + 1,
+        )
+
+        return new_state
 
     # We can experiment with having a separate accept function for JAX / NUMPY, so we
     # do not have to explicitly convert the arrays, but I do not think this saves any time.
     # I believe we need to convert arrays regardless, so we might as well do it prior.
     # Should discuss this with the boys and Daniel potentially.
-    def accept_func(self, n_accepted, accept, initial_positions, proposed_positions, log_psi_current, log_psi_proposed):
+    def accept_func(
+        self,
+        n_accepted,
+        accept,
+        initial_positions,
+        proposed_positions,
+        log_psi_current,
+        log_psi_proposed,
+    ):
         # accept is a boolean array, so you can use it to index directly
         new_positions = np.where(accept, proposed_positions, initial_positions)
         new_logp = np.where(accept, log_psi_proposed, log_psi_current)
