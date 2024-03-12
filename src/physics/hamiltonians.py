@@ -73,29 +73,12 @@ class HarmonicOscillator(Hamiltonian):
         `wf` is assumed to be the log of the wave function.
         """
         # Potential Energy
-        pe = 0.5 * self.backend.sum(self.backend.sum(r**2, axis=1))  # Use self.backend to support numpy/jax.numpy
-       
-        # Kinetic Energy using automatic differentiation on the log of the wavefunction 
-
-        #print(" laplacian shape ", self.backend.sum(self.alg_int.laplacian(r)).shape)
-        # This is done to make the JAX implementation work, but should most def be corrected at some point
-        # I think it would be faster if we were successful in vectorizing the array of positions inside the 
-        # compiled laplacian function.
-
-        # laplacian = 0
-        # for i in range(self._N):
-        #     laplacian += self.backend.sum(self.alg_int.laplacian(r[i]))
-        
-        
-        
-        laplacian = self.backend.sum(self.alg_int.laplacian(r))
+        pe = 0.5 * self.backend.sum(self.backend.sum(r**2, axis=1))  # Use self.backend to support numpy/jax.numpy 
+        laplacian = self.alg_int.laplacian(r)   # Kinetic energy
         
         # Correct calculation of local energy
         local_energy = -0.5 * laplacian + pe
 
-        #local_energy = self.backend.array(local_energy)
-        #local_energy = local_energy.reshape((1, 1))
-        # breakpoint()
         return local_energy
     
 

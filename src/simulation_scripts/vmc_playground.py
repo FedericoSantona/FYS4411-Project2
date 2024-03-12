@@ -73,7 +73,7 @@ system.train(
 results , _ , _  = system.sample(config.nsamples, nchains=config.nchains, seed=config.seed)
 
 # display the results
-print("this is the result" , results)
-print("Result Energy :  ",results.energy)
-print(f"Accept rat: {results.accept_rate}")
+print("Metrics: ", results)
+print("Result Energy: ", results.energy)
+print(f"Acceptance rate: {results.accept_rate}")
 

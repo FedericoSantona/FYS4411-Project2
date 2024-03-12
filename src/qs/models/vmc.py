@@ -21,7 +21,6 @@ class VMC:
         alpha = None,
         
     ):
-        
         self._configure_backend(backend)
         self.params = Parameter()
         self.log = log
@@ -35,12 +34,7 @@ class VMC:
         else:
             self._initialize_variational_params() # initialize the variational parameters (ALPHA)
 
-        self._initialize_vars(nparticles, dim, log, logger, logger_level)
-
-
-
-        r = 0 # I do not know what is this
-        
+        self._initialize_vars(nparticles, dim, log, logger, logger_level)        
         self.state = 0 # take a look at the qs.utils State class
 
         if self.log:
@@ -100,7 +94,7 @@ class VMC:
                 "prob_closure",
                 "wf_closure",
                 "grad_wf_closure",
-                # "laplacian_closure",
+                "laplacian_closure",
                 "grads_closure",
             ]
         
@@ -299,29 +293,22 @@ class VMC:
         alpha: Parameter(s) of the wavefunction
         """
         # Compute the Hessian (second derivative matrix) of the wavefunction
-        hessian_psi = jax.hessian(self.wf, argnums=0)
+        hessian_psi = jax.hessian(self.wf, argnums=0)           # The hessian matrix for our wavefunction
         d = r.shape[1]
-        r  =r.reshape(self._N,d)
+        size_r = r.size
+        r = r.ravel().reshape(size_r,1)                         # Ravel, and then reshape to (n_particles * n_dimensions, 1)
         # Apply the Hessian function to the positions to get the second derivatives
-        # And calculate the second term (since we are working in the log domain, we square the gradient of the wavefunction)
-        # WE SHOULD USE .RAVEL() TO FIX THIS SHIT
-        laplacian = 0
-        #breakpoint()
-        L = jax.lax.fori_loop(0, self._N, lambda i, laplacian: laplacian + 
-                              jnp.trace(hessian_psi(jnp.array([r[i]])).reshape(d, d)) + jnp.sum(self.grad_wf_closure(jnp.array([r[i]]), alpha) ** 2), 0
-                              ) 
+        # And calculate the second term (since we are working in the log domain, we square the gradient of the wavefunction) and sum for all particles and dimensions
         
-        # first_term = hessian_psi(r).reshape(d[0], d[0]) # Reshape to (n_particles, n_dimensions, n_dimensions)
-        # second_term = self.grad_wf_closure(r, alpha) ** 2
-
-        # #sum the diagonal elements of the Hessian + the to get the Laplacian
-        # laplacian = jnp.array(jnp.trace(first_term) + jnp.sum(second_term))
-        breakpoint()
-        return L
+        first_term = jnp.sum(jnp.trace(hessian_psi(r).reshape(size_r, size_r, size_r)))
+        second_term = jnp.sum(self.grad_wf_closure(r, alpha) ** 2)
+        laplacian = first_term + second_term
+                
         return laplacian
 
     def _initialize_vars(self, nparticles, dim, log, logger, logger_level):
-        
+        """Initializing the parameters in the VMC instance
+        """
         assert isinstance(nparticles, int), "nparticles must be an integer"
         assert isinstance(dim, int), "dim must be an integer"
 
