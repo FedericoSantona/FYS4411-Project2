@@ -27,14 +27,13 @@ class Metropolis(Sampler):
     ):
         # Initialize the VMC instance
         # Initialize Metropolis-specific variables
+        self.step_method = self.step
         self._seed = seed
         self._N = n_particles
         self._dim = dim
-        self.step_method = self.step
-
         super().__init__(alg_inst, hamiltonian, log, rng, scale, logger, backend)
 
-    def step(self, n_accepted, wf_squared, state, seed):
+    def step(self, wf_squared, state, seed):
         """One step of the random walk Metropolis algorithm."""
         initial_positions = state.positions
         next_gen = advance_PRNG_state(seed, state.delta)
@@ -51,7 +50,7 @@ class Metropolis(Sampler):
         accept = rng.random(initial_positions.shape[0]) < np.exp(log_accept_prob)  # Refrain from using Jax function outside jitcompiled code
         accept = accept.reshape(-1, 1)
         new_positions, new_logp, n_accepted = self.accept_func(
-            n_accepted=n_accepted,
+            n_accepted=state.n_accepted,
             accept=accept,
             initial_positions=initial_positions,
             proposed_positions=proposed_positions,
@@ -59,20 +58,12 @@ class Metropolis(Sampler):
             log_psi_proposed=prob_proposed,
         )
 
-        # Create new state
-        new_state = State(
-            positions=new_positions,
-            logp=new_logp,
-            n_accepted=n_accepted,
-            delta=state.delta + 1,
-        )
+        # Create new state by updating state variables.
+        state.logp = new_logp
+        state.n_accepted = n_accepted
+        state.delta += 1
+        state.positions = new_positions
 
-        return new_state
-
-    # We can experiment with having a separate accept function for JAX / NUMPY, so we
-    # do not have to explicitly convert the arrays, but I do not think this saves any time.
-    # I believe we need to convert arrays regardless, so we might as well do it prior.
-    # Should discuss this with the boys and Daniel potentially.
     def accept_func(
         self,
         n_accepted,
