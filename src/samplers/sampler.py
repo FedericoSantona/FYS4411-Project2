@@ -84,28 +84,23 @@ class Sampler:
 
         sampled_positions = []
         local_energies = []     # List to store local energies
-        total_accepted = 0      # Initialize total number of accepted moves
 
         for _ in t_range:  # Here use range(nsamples) if you train
-            # Perform one step of the MCMC algorithm
-            # Find the next state
-            new_state = self.step(
-                total_accepted, self.alg.prob, self.alg.state, self._seed
+            # Perform one step of the MCMC algorithm by updating the state parameters
+            # WE DO NOT create a new state instance, as this is not necessary.
+            self.step(
+                self.alg.prob, self.alg.state, self._seed
             )
-            total_accepted = new_state.n_accepted
-            self.alg.state = new_state
-
-            # Calculate the local energy
-            E_loc = self.hami.local_energy(self.alg.wf, new_state.positions)
+            E_loc = self.hami.local_energy(self.alg.wf, self.alg.state.positions)
             local_energies.append(E_loc)  # Store local energy
-            # Store sampled positions and calculate acceptance rate
-            sampled_positions.append(new_state.positions)
+            sampled_positions.append(self.alg.state.positions)
 
         if self._logger is not None:
             t_range.clear()
+            
 
         # Calculate acceptance rate and convert lists to arrays
-        acceptance_rate = total_accepted / (nsamples * self.alg._N)
+        acceptance_rate = self.alg.state.n_accepted / (nsamples * self.alg._N)
         local_energies = self.backend.array(local_energies)
         sampled_positions = self.backend.array(sampled_positions)
         mean_positions = self.backend.mean(self.backend.abs(sampled_positions), axis=0)

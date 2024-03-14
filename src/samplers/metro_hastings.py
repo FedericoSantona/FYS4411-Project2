@@ -10,12 +10,24 @@ from qs.models.vmc import VMC
 from qs.utils.parameter import Parameter
 
 
-
-
-
 class MetropolisHastings(Sampler):
-    def __init__(self, alg_inst, hamiltonian, rng, scale, n_particles, dim, seed, log, logger=None, logger_level="INFO", backend="numpy", time_step=0.01, diffusion_coeff=0.5):
-        
+    def __init__(
+        self,
+        alg_inst,
+        hamiltonian,
+        rng,
+        scale,
+        n_particles,
+        dim,
+        seed,
+        log,
+        logger=None,
+        logger_level="INFO",
+        backend="numpy",
+        time_step=0.01,
+        diffusion_coeff=0.5,
+    ):
+
         self.time_step = time_step
         self.diffusion_coeff = diffusion_coeff
         self._seed = seed
@@ -30,120 +42,98 @@ class MetropolisHastings(Sampler):
         self.step_method = self.step
 
         if self._backend == "numpy":
-            self.accept_fn = self.accept_numpy
             self.backend = np
         elif self._backend == "jax":
-            self.accept_fn = self.accept_jax
             self.backend = jnp
+            self.jit_functions()
         else:
             print("back end not supported !!!!!!")
 
         super().__init__(alg_inst, hamiltonian, log, rng, scale, logger, backend)
-        
 
-
-    def step(self, n_accepted, wf_squared, state, seed):
+    def jit_functions(self):
+        """Put the JAX jit wrapper on jittable functions inside the sampler"""
+        self.importance_sampling_interior = jit(self.importance_sampling_interior)
+    
+    
+    def step(self, wf_squared, state, seed):
         """One step of the importance sampling Metropolis-Hastings algorithm."""
-
-
         initial_positions = state.positions
-        
-
-
-        #print("initial_positions", initial_positions)
-
+        quantum_force_init = 2 * self.alg_inst.grad_wf(initial_positions)
         # Use the current positions to generate the quantum force
-        quantum_force_current = self.quantum_force(initial_positions)
-
         # Generate a proposal move
-        next_gen = advance_PRNG_state(seed , state.delta)
+        next_gen = advance_PRNG_state(seed, state.delta)
         rng = self._rng(next_gen)
-
         # Generate a proposal move
-        #eta = rng.normal(loc= 0 , scale = self.scale)
         eta = rng.normal(loc=0, scale=1, size=(self._N, self._dim))
-
-
-        proposed_positions = initial_positions + self.diffusion_coeff * quantum_force_current * self.time_step + eta * (self.backend.sqrt(self.time_step))
-        
-        #print("proposed_positions", proposed_positions)
-        
-        # Calculate the quantum force for the proposed positions
-        quantum_force_proposed = self.quantum_force(proposed_positions)
-
+        proposed_positions = (
+            initial_positions
+            + self.diffusion_coeff * quantum_force_init * self.time_step
+            + eta * (self.backend.sqrt(self.time_step))
+        )
         # Calculate wave function squared for current and proposed positions
         prob_current = wf_squared(initial_positions)
         prob_proposed = wf_squared(proposed_positions)
 
-        # Calculate the q value
-        
-        
-        q_value = self.q_value(initial_positions, proposed_positions, quantum_force_current, quantum_force_proposed, self.diffusion_coeff, self.time_step, prob_current, prob_proposed)
-        #breakpoint()
-        #print("q_value", q_value.shape)
-        
+        # Calculate the q - value
+        q_value, proposed_positions = self.importance_sampling_interior(initial_positions,
+                                                                        proposed_positions,
+                                                                        quantum_force_init,
+                                                                        prob_current,
+                                                                        prob_proposed,
+                                                                        self.diffusion_coeff,
+                                                                        self.time_step)
         # Decide on acceptance
-        accept = rng.random(self._N) <  self.backend.exp(q_value)
+        accept = rng.random(self._N) < self.backend.exp(q_value)
         accept = accept.reshape(-1, 1)
-
-       # print("accept", accept)
-
         # Update positions based on acceptance
-        new_positions, new_logp, n_accepted = self.accept_func(n_accepted=n_accepted, accept=accept, initial_positions=initial_positions, proposed_positions=proposed_positions, log_psi_current=prob_current, log_psi_proposed=prob_proposed)
+        new_positions, new_logp, n_accepted = self.accept_func(
+            n_accepted=state.n_accepted,
+            accept=accept,
+            initial_positions=initial_positions,
+            proposed_positions=proposed_positions,
+            log_psi_current=prob_current,
+            log_psi_proposed=prob_proposed,
+        )
+        # Create new state by updating state variables.
+        state.logp = new_logp
+        state.n_accepted = n_accepted
+        state.delta += 1
+        state.positions = new_positions
+
+
+    def importance_sampling_interior(self,
+                                     initial_positions,
+                                     proposed_positions,
+                                     q_force_init,
+                                     prob_init,
+                                     prob_proposed,
+                                     D,
+                                     dt):
         
-        #print("new_positions", new_positions)
+        q_force_proposed = 2 * self.alg_inst.grad_wf(proposed_positions)
+        
+        # Calculate wave function squared for current and proposed positions
+        
+        v_init = proposed_positions - initial_positions - D * dt * q_force_init
+        v_proposed = initial_positions - proposed_positions - D * dt * q_force_proposed
 
+        Gfunc_init = -self.backend.sum(v_init **2, axis=1) / (D * dt * 4)
+        Gfunc_proposed = -self.backend.sum(v_proposed **2, axis=1) / (D * dt * 4)
 
-        # Create new state
-        new_state = State(positions=new_positions, logp=new_logp, n_accepted=n_accepted, delta=state.delta + 1)
+        q_value = Gfunc_proposed - Gfunc_init + prob_proposed - prob_init
 
-        return new_state
-
-    def quantum_force(self, positions):
-
-        # the quantum force is 2 * the gradient of the log of the wave function
-        #print("grad", self.alg_inst.grad_wf(positions))
-        return 2* self.alg_inst.grad_wf(positions)
+        return q_value, proposed_positions
     
-    def GreenFunction(self, r_new, r_old, F_new, D, delta_t):
-
-        v = r_old - r_new - D*delta_t*F_new
-
-        return  - self.backend.sum(v**2, axis=1) /( D*delta_t * 4)    
-    
-
-    def q_value(self, r_old, r_new, F_old, F_new, D, delta_t , wf2_old, wf2_new):
-
-        G_forward = self.GreenFunction(r_new, r_old, F_new, D, delta_t)
-        G_backward = self.GreenFunction(r_old, r_new, F_old, D, delta_t)
-
-        q_value = G_forward - G_backward + wf2_new - wf2_old
-
-        return  q_value
-
-
-    """
-    def q_value(self, r_old, r_new, F_old, F_new, D, delta_t , wf2_old, wf2_new):
-
-
-        beta = r_new - r_old
-        
-        squared_term = D*delta_t*0.25 *(self.backend.sum(F_old**2 , axis=1 ) - self.backend.sum(F_new**2 , axis = 1))
-
-        #THE PROBLEM HERE IS HOW WE SUM THE BETA*F BECAUSE WE NEED TO REDUCE 
-        #THE DIMENSIONALITY TO ( N PARTICLES, 1) BUT WE HAVE TO FIND A WAY THAT 
-        # MAKES SENSE DO IT 
-
-        
-        linear_term = 0.5 *self.backend.sum(beta * (F_new + F_old), axis= 1)
-        
-        q_value =  squared_term - linear_term  + wf2_new - wf2_old
-
-        return  q_value 
-
-    """
-
-    def accept_func(self, n_accepted, accept, initial_positions, proposed_positions, log_psi_current, log_psi_proposed):
+    def accept_func(
+        self,
+        n_accepted,
+        accept,
+        initial_positions,
+        proposed_positions,
+        log_psi_current,
+        log_psi_proposed,
+    ):
         # accept is a boolean array, so you can use it to index directly
         new_positions = np.where(accept, proposed_positions, initial_positions)
         new_logp = np.where(accept, log_psi_proposed, log_psi_current)
@@ -153,28 +143,3 @@ class MetropolisHastings(Sampler):
 
         return new_positions, new_logp, n_accepted
 
-
-"""
-    def accept_jax(self, n_accepted, accept, initial_positions, proposed_positions, log_psi_current, log_psi_proposed):
-            # Use where to choose between the old and new positions/probabilities based on the accept array
-            new_positions = jnp.where(accept, proposed_positions, initial_positions)
-            new_logp = jnp.where(accept, log_psi_proposed, log_psi_current)
-
-            # Count the number of accepted moves
-            n_accepted += jnp.sum(accept)
-
-            return new_positions, new_logp, n_accepted
-
-    def accept_numpy(self, n_accepted, accept, initial_positions, proposed_positions, log_psi_current, log_psi_proposed):
-        # accept is a boolean array, so you can use it to index directly
-        new_positions = np.where(accept, proposed_positions, initial_positions)
-        new_logp = np.where(accept, log_psi_proposed, log_psi_current)
-
-        # Count the number of accepted moves
-        n_accepted += np.sum(accept)
-
-        return new_positions, new_logp, n_accepted
-        
-"""
-
-    
