@@ -83,8 +83,8 @@ class Sampler:
             t_range = range(nsamples)
 
         sampled_positions = []
-        local_energies = []  # List to store local energies
-        total_accepted = 0  # Initialize total number of accepted moves
+        local_energies = []     # List to store local energies
+        total_accepted = 0      # Initialize total number of accepted moves
 
         for _ in t_range:  # Here use range(nsamples) if you train
             # Perform one step of the MCMC algorithm

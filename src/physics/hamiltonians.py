@@ -30,7 +30,7 @@ class Hamiltonian:
             case  "jax":
                 self.backend = jnp
                 self.la = jnp.linalg
-                # You might also be able to jit some functions here
+                # self.kinetic_energy = jax.pmap(self.kinetic_energy) NB!! This should be looked at
             case _: # noqa
                 raise ValueError("Invalid backend:", backend)
 
@@ -67,6 +67,15 @@ class HarmonicOscillator(Hamiltonian):
     # I dont think we should use JAX here either - local energy is called repeatedly, and thus not 
     # easily compiled in JAX. The JNP.arrays should be used _only_ where we can actually run the
     # JAX JIT compiler. I think it'll potentially reduce the performance of the program otherwise.
+    
+    def kinetic_energy(self, r):
+        """Kinetic energy of the system"""
+        # I believe there should be a way to easily parallelize this for loop (i.e split it into smaller for-loops that run in parallel)
+        laplacian = 0
+        for i in range(self._N):
+            laplacian += self.alg_int.laplacian(r[i])
+        return -0.5 * laplacian
+    
     def local_energy(self, wf, r):
         """Local energy of the system
         Calculates the local energy of a system with positions `r` and wavefunction `wf`.
@@ -74,10 +83,10 @@ class HarmonicOscillator(Hamiltonian):
         """
         # Potential Energy
         pe = 0.5 * self.backend.sum(self.backend.sum(r**2, axis=1))  # Use self.backend to support numpy/jax.numpy 
-        laplacian = self.alg_int.laplacian(r)   # Kinetic energy
-        
+        # Kinetic energy
+        ke = self.kinetic_energy(r)
         # Correct calculation of local energy
-        local_energy = -0.5 * laplacian + pe
+        local_energy = ke + pe
 
         return local_energy
     

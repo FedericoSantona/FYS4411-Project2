@@ -262,8 +262,6 @@ class VMC:
         """
        
         alpha = self.params.get("alpha")  # Using Parameter.get to access alpha 
-
-       # print("alpha inside LAPLACIAN ", alpha)
         return self.laplacian_closure(r, alpha)
     
 
@@ -280,9 +278,8 @@ class VMC:
         r2 =  self.backend.sum(r**2, axis=1)
         
         laplacian = 4* alpha**2 * r2 - 2 * alpha * d # is this the actual log domain? what is the log domain?
-
-        laplacian = laplacian.reshape(-1, 1)  # Reshape to (n_particles, 1)
-
+        laplacian = self.backend.sum(laplacian.reshape(-1, 1))  # Reshape to (n_particles, 1)
+    
         return laplacian
 
     def laplacian_closure_jax(self, r, alpha):
@@ -294,16 +291,12 @@ class VMC:
         """
         # Compute the Hessian (second derivative matrix) of the wavefunction
         hessian_psi = jax.hessian(self.wf, argnums=0)           # The hessian matrix for our wavefunction
-        d = r.shape[1]
-        size_r = r.size
-        r = r.ravel().reshape(size_r,1)                         # Ravel, and then reshape to (n_particles * n_dimensions, 1)
-        # Apply the Hessian function to the positions to get the second derivatives
-        # And calculate the second term (since we are working in the log domain, we square the gradient of the wavefunction) and sum for all particles and dimensions
-        
-        first_term = jnp.sum(jnp.trace(hessian_psi(r).reshape(size_r, size_r, size_r)))
+        d = self._dim
+        r = r.reshape(1,d)        
+        first_term = jnp.trace(hessian_psi(r).reshape(d, d))
         second_term = jnp.sum(self.grad_wf_closure(r, alpha) ** 2)
         laplacian = first_term + second_term
-                
+        
         return laplacian
 
     def _initialize_vars(self, nparticles, dim, log, logger, logger_level):
