@@ -261,10 +261,17 @@ class QS:
                 nsamples=batch_size, nchains=1, seed=seed
             )
 
-            # Compute gradients for the batch
-            grads_alpha = self.backend.mean(self.alg.grads_E_loc(sampled_positions))
+            #sampled positions if of shape (batch_size, nparticles, dim)
 
-            grads_alpha = grads_alpha.reshape(-1, 1)
+            
+
+            grads = self.backend.mean(self.alg.grads(sampled_positions), axis=1)
+
+            first_term = self.backend.mean(grads * local_energies)
+            second_term = self.backend.mean(grads) * self.backend.mean(local_energies)
+
+            grads_alpha = 2 * (first_term - second_term)
+           
 
             # Update alpha using the computed gradients and the optimizer
             # self.alpha = self.backend.array(self._optimizer.step(self.alpha, grads_alpha))
