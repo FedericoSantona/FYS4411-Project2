@@ -2,9 +2,14 @@ import jax.numpy as jnp
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
-matplotlib.use("TkAgg")
-x_values = np.linspace(0, 10, 100)
-y_values = np.sin(x_values)
 
-plt.plot(x_values, y_values)
-plt.show()
+
+E = 100e6
+dm2 = 7.5e-5
+
+
+x = 2*np.pi*E / dm2
+
+y = x* 197.327e-4
+
+print(y)

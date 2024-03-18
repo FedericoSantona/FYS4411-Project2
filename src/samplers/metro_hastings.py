@@ -64,6 +64,7 @@ class MetropolisHastings(Sampler):
         # Generate a proposal move
         next_gen = advance_PRNG_state(seed, state.delta)
         rng = self._rng(next_gen)
+        
         # Generate a proposal move
         eta = rng.normal(loc=0, scale=1, size=(self._N, self._dim))
         proposed_positions = (

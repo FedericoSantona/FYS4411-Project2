@@ -1,5 +1,6 @@
 import sys
 import os
+import time
 
 
 
@@ -26,6 +27,10 @@ jax.config.update("jax_platform_name", "cpu")
 All the parameters you want to change are contained in the file config.py
 
 """
+
+# start the timer
+start_time = time.time()
+
 # set up the system with its backend and level of logging, seed, and other general properties depending on how you want to run it
 system = quantum_state.QS(
     backend=config.backend,
@@ -72,8 +77,13 @@ system.train(
 # now we get the results or do whatever we want with them
 results , _ , _  = system.sample(config.nsamples, nchains=config.nchains, seed=config.seed)
 
+end_time = time.time()
+execution_time = end_time - start_time
+
 # display the results
 print("Metrics: ", results)
 print("Result Energy: ", results.energy)
 print(f"Acceptance rate: {results.accept_rate}")
+
+print(f"Execution time: {execution_time} seconds")
 

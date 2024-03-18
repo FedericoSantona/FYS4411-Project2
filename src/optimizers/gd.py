@@ -24,4 +24,5 @@ class Gd(Optimizer):
             list: Updated parameters.
         """
         updated_params = [p - self.eta * g for p, g in zip(params, grads)]
+        #print("updated_params", updated_params)
         return updated_params
