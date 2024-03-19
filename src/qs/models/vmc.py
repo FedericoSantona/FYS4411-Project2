@@ -19,6 +19,7 @@ class VMC:
         logger_level="INFO",
         backend="numpy",
         alpha = None,
+        beta = None,
         
     ):
         self._configure_backend(backend)
@@ -33,6 +34,9 @@ class VMC:
             self._initialize_variational_params(alpha)
         else:
             self._initialize_variational_params() # initialize the variational parameters (ALPHA)
+
+        if beta: 
+            self.beta = beta
 
         self._initialize_vars(nparticles, dim, log, logger, logger_level)        
         self.state = 0 # take a look at the qs.utils State class
@@ -77,7 +81,6 @@ class VMC:
             self.grad_wf_closure = self.grad_wf_closure_jax
             self.grads_closure = self.grads_closure_jax
             self.laplacian_closure = self.laplacian_closure_jax
-            self.grads_E_loc_closure = self.grads_E_loc_closure_jax
             self._jit_functions()
         else:
             raise ValueError(f"Backend {self.backend} not supported")
@@ -95,7 +98,7 @@ class VMC:
                 "wf_closure",
                 "grad_wf_closure",
                 "laplacian_closure",
-                "grads_closure",
+                #"grads_closure",
             ]
         
 
@@ -128,6 +131,33 @@ class VMC:
         """
         
         return -alpha * self.backend.sum(r**2, axis=1)  # Sum over the coordinates x^2 + y^2 + z^2 for each particle
+    
+    def wf_eo(self, r):
+        """
+        Helper for the wave function
+
+        OBS: We strongly recommend you work with the wavefunction in log domain. 
+        """
+        alpha = self.params.get("alpha")  # Using Parameter.get to access alpha
+        
+        return self.wf_closure_eo(r, alpha)
+
+
+    
+    def wf_closure_eo(self, r, alpha):
+        """
+        
+        r: (N, dim) array so that r_i is a dim-dimensional vector
+        alpha: (N, dim) array so that alpha_i is a dim-dimensional vector
+
+        return: should return Ψ(alpha, r)
+
+        OBS: We strongly recommend you work with the wavefunction in log domain. 
+        """
+        
+        return -alpha * (self.beta**2 * self.backend.sum(r[:, 0]**2) + self.backend.sum(r[:, 1:]**2, axis=1))  # Sum over the coordinates x^2 + y^2 + z^2 for each particle
+    
+
     
 
     def prob_closure(self, r, alpha):
@@ -184,6 +214,7 @@ class VMC:
         alpha = self.params.get("alpha")  # Using Parameter.get to access alpha 
         
         return self.grad_wf_closure(r, alpha)
+    
 
     def grads(self, r):
         """
@@ -203,56 +234,55 @@ class VMC:
     
         # For the given trial wavefunction, the gradient with respect to alpha is the negative of the wavefunction
         # times the sum of the squares of the positions, since the wavefunction is exp(-alpha * sum(r_i^2)).
-        grad_alpha = -self.backend.sum(r**2, axis=1)  # The gradient with respect to alpha
+        grad_alpha = self.backend.sum( -self.backend.sum(r**2, axis=2) , axis = 1)  # The gradient with respect to alpha
+
+        #breakpoint()
         return grad_alpha
 
     def grads_closure_jax(self, r, alpha):
+    
         """
-        Computes the gradient of the wavefunction with respect to the variational parameters with JAX grad.
+        pos = r
+        var = alpha
+        batches = r.shape[0]
+        grad_alpha = []
+
+
+        for b in range(batches):  
+
+            pos_b =r[b]
+        
+            grad_alpha_fn = jax.grad(lambda a: jnp.sum(self.wf_closure(r[b] , a)) , argnums= 0)
+
+            support = grad_alpha_fn(alpha) 
+
+            grad_alpha.append(support)
+
+            breakpoint()
+
+
+        
+        grad_alpha = jnp.array(grad_alpha) 
+
         """
-        # Assuming self.wf expects alpha to be a JAX array
-        grad_alpha_fn = jax.grad(lambda a: jnp.sum(self.wf_closure(r, a)), argnums=0)
-        grad_alpha = grad_alpha_fn(alpha)
+
+        """
+        Computes the gradient of the wavefunction with respect to the variational parameters with JAX grad using Vmap.
+        """
+
+        # Define the gradient function for a single instance
+        def single_grad(pos, var):
+            return jax.grad(lambda a: jnp.sum(self.wf_closure(pos, a)))(var)
+        
+        # Vectorize the gradient computation over the batch dimension
+        batched_grad = jax.vmap(single_grad, (0, None), 0)
+        
+        # Compute gradients for the entire batch
+        grad_alpha = batched_grad(r, alpha)
+        
         return grad_alpha
 
-    
-    def grads_E_loc(self, r):
 
-        """
-        Helper for the gradient of the Local  energy  within respect to the variational parameter
-
-        """
-        alpha = self.params.get("alpha")
-
-        return self.grads_E_loc_closure(r, alpha)
-    
-    def grads_E_loc_closure(self, r, alpha):
-        """
-        Computes the gradient of the laplacian of the wavefunction with respect to the variational parameters analytically
-        """
-        
-        r = r.reshape(-1, self._dim)  # Reshape to (n_particles, n_dimensions)
-        d = r.shape[1]  # Number of dimensions
-
-        r2 =  self.backend.sum(r**2, axis=1)
-
-        grad_laplacian = 8*alpha * r2- 2*d
-        
-        return -0.5 *grad_laplacian
-    
-    def grads_E_loc_closure_jax(self, r, alpha):
-
-        """
-        Computes the gradient of the laplacian of the wavefunction with respect to the variational parameters with JAX grad.
-        """
-          # Ensure `r` is correctly shaped for JAX operations
-        r = jnp.reshape(r, newshape=(-1, self._dim))  # Example reshape, adjust `dim` as necessary
-    
-        grad_fn = jax.grad(self.laplacian_closure_jax, argnums=1)
-
-        grad_E = - 0.5* grad_fn(r, alpha)
-
-        return grad_E
     
     def laplacian(self, r):
         """
@@ -273,7 +303,10 @@ class VMC:
         # print("ANALITICAL")
         # For a Gaussian wavefunction in log domain, the Laplacian is simply 2*alpha*d - 4*alpha^2*sum(r_i^2),
         # where d is the number of dimensions.
-        r = r.reshape(-1, self._dim)  # Reshape to (n_particles, n_dimensions)
+        #print("r shape BEFORE ", r.shape)
+        r = r.reshape(-1, self._dim)  # Reshape to (1 , n_dimensions)
+        #print("r shape AFTER ", r.shape)
+
         d = r.shape[1]  # Number of dimensions
         r2 =  self.backend.sum(r**2, axis=1)
         
@@ -292,6 +325,8 @@ class VMC:
         # Compute the Hessian (second derivative matrix) of the wavefunction
         hessian_psi = jax.hessian(self.wf, argnums=0)           # The hessian matrix for our wavefunction
         d = self._dim
+
+        #print("r shape ", r.shape)
         r = r.reshape(1,d)        
         first_term = jnp.trace(hessian_psi(r).reshape(d, d))
         second_term = jnp.sum(self.grad_wf_closure(r, alpha) ** 2)

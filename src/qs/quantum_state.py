@@ -75,6 +75,8 @@ class QS:
         self.time_step = time_step
         self.diffusion_coeff = diffusion_coeff
 
+
+
         if rng is None:
             # If no RNG is provided but a seed is, initialize a new RNG with the seed.
             self.rng = default_rng
@@ -125,12 +127,15 @@ class QS:
         # Initialize the parameters for the VMC class wavefunction, and set the alpha parameter from config.py
         self.alg._initialize_vars(
             self._N, self._dim, self._log, self.logger, self.logger_level)
+        
         self.alpha = self.alg.params.get("alpha")           # This should not be necessary, alpha gets picked out in the .wf
                                                             # Meaning we could save it inside the .wf function as self.alpha, and call it as self.alg.alpha. 
                                                             # Would it save us some time? No clue, atleast it reduces the need to call the config file.
 
         if self._wf_type == "vmc":
-            self.wf = self.alg.wf  
+            self.wf = self.alg.wf 
+        elif self._wf_type == "eo":
+            self.wf = self.alg.wf_eo 
         else:
             raise ValueError("Invalid wave function type, should be 'vmc'")
         self._is_initialized_ = True
@@ -254,33 +259,36 @@ class QS:
         else:
             t_range = range(max_iter)
 
+        alpha = self.alg.params.get("alpha")
+
+       
+
         for iteration in t_range:
 
             # Sample data in batches
             _, sampled_positions, local_energies = self.sample(
                 nsamples=batch_size, nchains=1, seed=seed
-            )
+         )
 
             #sampled positions if of shape (batch_size, nparticles, dim)
 
-            
+            print("Alpha during training", self.alpha)
 
-            grads = self.backend.mean(self.alg.grads(sampled_positions), axis=1)
+            grads = self.alg.grads(sampled_positions)
+
 
             first_term = self.backend.mean(grads * local_energies)
             second_term = self.backend.mean(grads) * self.backend.mean(local_energies)
 
             grads_alpha = 2 * (first_term - second_term)
            
-
-            # Update alpha using the computed gradients and the optimizer
-            # self.alpha = self.backend.array(self._optimizer.step(self.alpha, grads_alpha))
+           
             # Ensure alpha and its gradient are iterables
             self.alpha = self.backend.array(
                 self._optimizer.step([self.alpha], [grads_alpha])
             )[0]
 
-            print("Alpha druing training", self.alpha)
+            
 
             # Update the alpha in the Parameter instance
             self.alg.params.set("alpha", self.alpha)

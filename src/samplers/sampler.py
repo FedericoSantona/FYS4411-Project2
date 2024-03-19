@@ -50,9 +50,7 @@ class Sampler:
         """
 
         nchains = check_and_set_nchains(nchains, self._logger)
-        seeds = generate_seed_sequence(
-            seed, nchains
-        )  # YOU have to understand how to use it because you already do it in the MEtro step
+        seeds = generate_seed_sequence(  seed, nchains )  # YOU have to understand how to use it because you already do it in the MEtro step
         if nchains == 1:
             chain_id = 0
 

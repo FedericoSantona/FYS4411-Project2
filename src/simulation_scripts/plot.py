@@ -28,7 +28,7 @@ All the parameters you want to change are contained in the file config.py
 """
 # set up the system with its backend and level of logging, seed, and other general properties depending on how you want to run it
 
-alpha_values = np.array([0.3, 0.4, 0.5, 0.6, 0.7 , 0.8 , 0.9 ])
+alpha_values = np.array([0.3, 0.4, 0.5, 0.6, 0.7 , 0.8 , 0.9 , 1.0 ])
 energies = []
 variances = []
 error = []
@@ -109,14 +109,14 @@ fig, ax = plt.subplots(2, figsize=(10, 10))
 ax[0].plot(alpha_values, energies, "o-", label="Energy")
 ax[0].set_xlabel("Alpha")
 ax[0].set_ylabel("Energy")
-ax[0].set_title("Energy as a function of alpha")
+ax[0].set_title("Energy as a function of alpha in analytical calculation")
 ax[0].legend()
 
 # Plotting Variance
 ax[1].plot(alpha_values, variances, "o-", label="Variance")
 ax[1].set_xlabel("Alpha")
 ax[1].set_ylabel("Variance")
-ax[1].set_title("Variance as a function of alpha")
+ax[1].set_title("Variance as a function of alpha in analytical calculation")
 ax[1].legend()
 
 
