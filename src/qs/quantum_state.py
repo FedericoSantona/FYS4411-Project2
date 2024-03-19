@@ -46,6 +46,7 @@ class QS:
         beta=None,
         time_step=None,
         diffusion_coeff=None,
+        type_hamiltonian = "ho"
     ):
         """Quantum State
         It is conceptually important to understand that this is the system.
@@ -74,6 +75,7 @@ class QS:
         self.beta = beta
         self.time_step = time_step
         self.diffusion_coeff = diffusion_coeff
+        self.type_hamiltonian = type_hamiltonian
 
 
 
@@ -133,9 +135,10 @@ class QS:
                                                             # Would it save us some time? No clue, atleast it reduces the need to call the config file.
 
         if self._wf_type == "vmc":
-            self.wf = self.alg.wf 
-        elif self._wf_type == "eo":
-            self.wf = self.alg.wf_eo 
+            if self.type_hamiltonian == "ho":
+                self.wf = self.alg.wf 
+            elif self.type_hamiltonian == "eo":
+                self.wf = self.alg.wf_eo
         else:
             raise ValueError("Invalid wave function type, should be 'vmc'")
         self._is_initialized_ = True
@@ -259,9 +262,7 @@ class QS:
         else:
             t_range = range(max_iter)
 
-        alpha = self.alg.params.get("alpha")
 
-       
 
         for iteration in t_range:
 
@@ -274,27 +275,30 @@ class QS:
 
             print("Alpha during training", self.alpha)
 
-            grads = self.alg.grads(sampled_positions)
+            grads = (self.alg.grads(sampled_positions))
 
-
+        
             first_term = self.backend.mean(grads * local_energies)
+    
             second_term = self.backend.mean(grads) * self.backend.mean(local_energies)
+
 
             grads_alpha = 2 * (first_term - second_term)
            
-           
+    
             # Ensure alpha and its gradient are iterables
-            self.alpha = self.backend.array(
+            self.alpha =self.backend.array(
                 self._optimizer.step([self.alpha], [grads_alpha])
             )[0]
 
-            
 
             # Update the alpha in the Parameter instance
             self.alg.params.set("alpha", self.alpha)
 
         self._is_trained_ = True
-        print("Alpha after training", self.alpha)
+        print("Alpha after training", self.alg.params.get("alpha"))
+
+        #breakpoint()
 
         if self.logger is not None:
             self.logger.info("Training done")

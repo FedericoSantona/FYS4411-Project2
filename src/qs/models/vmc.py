@@ -272,7 +272,7 @@ class VMC:
 
         # Define the gradient function for a single instance
         def single_grad(pos, var):
-            return jax.grad(lambda a: jnp.sum(self.wf_closure(pos, a)))(var)
+            return jax.grad(lambda a: jnp.sum(self.wf_closure(pos, a)))(var) 
         
         # Vectorize the gradient computation over the batch dimension
         batched_grad = jax.vmap(single_grad, (0, None), 0)
@@ -280,7 +280,7 @@ class VMC:
         # Compute gradients for the entire batch
         grad_alpha = batched_grad(r, alpha)
         
-        return grad_alpha
+        return self.backend.squeeze(grad_alpha)
 
 
     
