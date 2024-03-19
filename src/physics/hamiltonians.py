@@ -97,6 +97,21 @@ class EllipticOscillator(HarmonicOscillator):
 
         self.beta = beta  # Store the ellipticity parameter
 
+    def potential_energy(self, r):
+        """Calculates the potential energy
+        """
+        pe = 0.5 * self.backend.sum(self.beta**2 * r[:, 0]**2 + self.backend.sum(r[:, 1:]**2, axis=1))
+        int_energy = 0
+        if self._int_type == "Coulomb":
+            r_copy = r.copy()
+            r_dist = self.la.norm(r_copy[None, ...] - r_copy[:, None, :], axis=-1)
+            r_dist = self.backend.where(r_dist < 0.0043, 0, r_dist)                 # Should be edited to be self.radius or something, not 0.0043
+            int_energy = self.backend.sum(
+                self.backend.triu(1 / r_dist, k=1)
+            )   # Calculates the upper triangular of the distance matrix (to not do a double sum)
+        
+        return pe + int_energy
+    
     def local_energy(self, wf, r):
         ###TODO Impliment local energy for EO
 
@@ -106,21 +121,19 @@ class EllipticOscillator(HarmonicOscillator):
         """
         # Adjust the potential energy calculation for the elliptic oscillator
         # Assuming r is structured as [nparticles, dim], and the first column is x, second is y, and the third is z.
-        pe = 0.5 * self.backend.sum(self.beta**2 * r[:, 0]**2 + self.backend.sum(r[:, 1:]**2, axis=1))
-
+        pe = self.potential_energy(r)
+        ke = self.kinetic_energy(r)
         # Kinetic Energy using automatic differentiation on the log of the wavefunction 
-
         #print(" laplacian shape ", self.backend.sum(self.alg_int.laplacian(r)).shape)
-
         #laplacian = self.backend.sum(self.alg_int.laplacian(r)) this was more efficient tho :(
         
-        laplacian = 0
-        for i in range(self._N):
-            laplacian += self.backend.sum(self.alg_int.laplacian(r[i]))
+        # laplacian = 0
+        # for i in range(self._N):
+        #     laplacian += self.backend.sum(self.alg_int.laplacian(r[i]))
         
         
         # Correct calculation of local energy
-        local_energy = -0.5 * laplacian + pe
+        local_energy =  ke + pe
 
         #local_energy = self.backend.array(local_energy)
         #local_energy = local_energy.reshape((1, 1))
