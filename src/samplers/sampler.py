@@ -3,10 +3,12 @@ import copy
 import jax
 import jax.numpy as jnp
 import numpy as np
+import pandas as pd
 from qs.utils import (
     check_and_set_nchains,
 )  # we suggest you use this function to check and set the number of chains when you parallelize
 from qs.utils import generate_seed_sequence
+from qs.utils import sampler_utils
 from qs.utils import State
 from tqdm.auto import tqdm  # progress bar
 
@@ -59,9 +61,14 @@ class Sampler:
             )
 
         else:
-            # Parallelize
-            print("Value Error parallelization is not implemented!!!!!!")
-            pass
+            multi_sampler = sampler_utils.multiproc
+            results, self._sampled_positions, self._local_energies = multi_sampler(
+                self._sample, 
+                nsamples, 
+                nchains, 
+                seeds
+            )
+            self._results = pd.DataFrame(results)
 
         self._sampling_performed_ = True
         if self._logger is not None:
@@ -69,8 +76,14 @@ class Sampler:
 
         return self._results, self._sampled_positions, self._local_energies
 
-    def _sample(self, nsamples, chain_id):
-        """To be called by process. Here the actual sampling is performed."""
+    def _sample(self, nsamples, chain_id, seed=None):
+        """To be called by process. Here the actual sampling is performed.
+        
+        Args:
+        seed : int,
+            Seed for the random number generator. The default is self._seed (what was initialized in the system class).
+            We need to able to set the seed for each chain in the sampling process, otherwise we will get the same results for each chain. 
+        """
         if self._log:
             t_range = tqdm(
                 range(nsamples),
@@ -81,18 +94,20 @@ class Sampler:
             )
         else:
             t_range = range(nsamples)
-
+        # Set the seed for the chain
+        if seed is None:
+            seed = self._seed
+        
         sampled_positions = []
         local_energies = []     # List to store local energies
-
-        for _ in t_range:  # Here use range(nsamples) if you train
+        for _ in t_range:       # Here use range(nsamples) if you train
             # Perform one step of the MCMC algorithm by updating the state parameters
             # WE DO NOT create a new state instance, as this is not necessary.
             self.step(
-                self.alg.prob, self.alg.state, self._seed
+                self.alg.prob, self.alg.state, seed
             )
             E_loc = self.hami.local_energy(self.alg.wf, self.alg.state.positions)
-            local_energies.append(E_loc)  # Store local energy
+            local_energies.append(E_loc)                    # Store local energy
             sampled_positions.append(self.alg.state.positions)
 
         if self._logger is not None:
