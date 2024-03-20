@@ -44,6 +44,7 @@ class QS:
         seed=None,
         alpha=None,
         beta=None,
+        radius = None,
         time_step=None,
         diffusion_coeff=None,
         type_hamiltonian = "ho"
@@ -65,6 +66,8 @@ class QS:
         self.logp = None
         self._seed = seed
         self.logger_level = logger_level
+        self.radius = radius
+
         self.logger = (
             setup_logger(self.__class__.__name__, level=logger_level)
             if self._log
@@ -125,6 +128,8 @@ class QS:
             logger_level=self.logger_level,
             backend=self._backend,
             alpha=self._init_alpha,
+            beta=self.beta,
+            radius = self.radius
         )
         # Initialize the parameters for the VMC class wavefunction, and set the alpha parameter from config.py
         self.alg._initialize_vars(
@@ -135,13 +140,11 @@ class QS:
                                                             # Would it save us some time? No clue, atleast it reduces the need to call the config file.
 
         if self._wf_type == "vmc":
-            if self.type_hamiltonian == "ho":
-                self.wf = self.alg.wf 
-            elif self.type_hamiltonian == "eo":
-                self.wf = self.alg.wf_eo
+            self.wf = self.alg.wf 
         else:
             raise ValueError("Invalid wave function type, should be 'vmc'")
         self._is_initialized_ = True
+
 
     def set_hamiltonian(self, type_, int_type, **kwargs):
         """
