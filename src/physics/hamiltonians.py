@@ -3,7 +3,7 @@ import jax.numpy as jnp
 from jax import jit
 import numpy as np
 from qs.models.vmc import VMC
-
+from simulation_scripts import config
 jax.config.update("jax_enable_x64", True)
 jax.config.update("jax_platform_name", "cpu")
 
@@ -21,7 +21,7 @@ class Hamiltonian:
         """
         self._N = nparticles
         self._dim = dim
-        self._int_type = int_type
+        self._int_type = config.interaction
 
         match backend:
             case "numpy":
@@ -102,14 +102,19 @@ class EllipticOscillator(HarmonicOscillator):
         """
         pe = 0.5 * self.backend.sum(self.beta**2 * r[:, 0]**2 + self.backend.sum(r[:, 1:]**2, axis=1))
         int_energy = 0
+
         if self._int_type == "Coulomb":
+        
             r_copy = r.copy()
             r_dist = self.la.norm(r_copy[None, ...] - r_copy[:, None, :], axis=-1)
-            r_dist = self.backend.where(r_dist < 0.0043, 0, r_dist)                 # Should be edited to be self.radius or something, not 0.0043
+            r_dist = self.backend.where(r_dist < config.radius, 0, r_dist)                 # Should be edited to be self.radius or something, not 0.0043
             int_energy = self.backend.sum(
                 self.backend.triu(1 / r_dist, k=1)
             )   # Calculates the upper triangular of the distance matrix (to not do a double sum)
-        
+        else:
+            pass
+
+
         return pe + int_energy
     
     def local_energy(self, wf, r):

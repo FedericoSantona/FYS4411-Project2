@@ -6,7 +6,7 @@ from jax import device_get
 from qs.utils import Parameter # IMPORTANT: you may or may not use this depending on how you want to implement your code and especially your jax gradient implementation
 from qs.utils import State
 import pdb
-
+from simulation_scripts import config
 class VMC:
     def __init__(
         self,
@@ -20,6 +20,8 @@ class VMC:
         backend="numpy",
         alpha = None,
         beta = None,
+        radius = None,
+     
         
     ):
         self._configure_backend(backend)
@@ -27,7 +29,9 @@ class VMC:
         self.log = log
         self._seed = seed
         self._logger = logger
-        self._N = nparticles             
+        self._N = nparticles         
+        self.radius = config.radius
+        self.beta = beta
         self.rng = random.PRNGKey(self._seed)  # Initialize RNG with the provided seed
         
         if alpha:
@@ -81,9 +85,16 @@ class VMC:
             self.grad_wf_closure = self.grad_wf_closure_jax
             self.grads_closure = self.grads_closure_jax
             self.laplacian_closure = self.laplacian_closure_jax
-            self._jit_functions()
+            #self._jit_functions()
         else:
             raise ValueError(f"Backend {self.backend} not supported")
+        
+
+        if config.interaction == "Coulomb" or config.hamiltonian == "eo":
+            self.wf_closure = self.wf_closure_int
+            if backend != "jax":
+                raise ValueError(f"Backend {self.backend} not supported for Coulomb interaction")
+                
 
     def _jit_functions(self):
         """
@@ -98,7 +109,7 @@ class VMC:
                 "wf_closure",
                 "grad_wf_closure",
                 "laplacian_closure",
-                #"grads_closure",
+                "grads_closure",
             ]
         
 
@@ -128,35 +139,54 @@ class VMC:
         return: should return Ψ(alpha, r)
 
         OBS: We strongly recommend you work with the wavefunction in log domain. 
-        """
-        
-        return -alpha * self.backend.sum(r**2, axis=1)  # Sum over the coordinates x^2 + y^2 + z^2 for each particle
-    
-    def wf_eo(self, r):
-        """
-        Helper for the wave function
 
-        OBS: We strongly recommend you work with the wavefunction in log domain. 
         """
-        alpha = self.params.get("alpha")  # Using Parameter.get to access alpha
-        
-        return self.wf_closure_eo(r, alpha)
-
+        wf = -alpha * (self.beta**2 * (r[:, 0]**2) + self.backend.sum(r[:, 1:]**2, axis=1))
 
     
-    def wf_closure_eo(self, r, alpha):
+        return (wf) 
+
+    def wf_closure_int(self, r, alpha):
         """
         
         r: (N, dim) array so that r_i is a dim-dimensional vector
-        alpha: (N, dim) array so that alpha_i is a dim-dimensional vector
+        alpha: (1,1) array so that alpha is just a number but in the array form
 
-        return: should return Ψ(alpha, r)
+        return: should return a an array of the wavefunction for each particle ( N, )
 
-        OBS: We strongly recommend you work with the wavefunction in log domain. 
+       OBS: We strongly recommend you work with the wavefunction in log domain. 
         """
         
-        return -alpha * (self.beta**2 * self.backend.sum(r[:, 0]**2) + self.backend.sum(r[:, 1:]**2, axis=1))  # Sum over the coordinates x^2 + y^2 + z^2 for each particle
+        g =  -alpha * (self.beta**2 * (r[:, 0]**2) + self.backend.sum(r[:, 1:]**2, axis=1)) #-alpha * self.backend.sum(r**2, axis=1)  # Sum over the coordinates x^2 + y^2 + z^2 for each particle
+
+
+        N ,dim = r.shape
+   
+        # Initialize f as a zero array of shape (N,)
+        f = jnp.zeros(N)
+        
+        # Calculate pairwise distances
+        distances = jnp.sqrt(jnp.sum((r[:, None, :] - r[None, :, :])**2, axis=-1))
+        
+        # Apply interaction function, avoiding singularity and self-interaction
+        # Create a mask to exclude self-interactions and ensure interactions are only counted once
+        mask = jnp.triu(jnp.ones((N, N), dtype=bool), k=1)
+        
+        # Apply interaction function, avoiding singularity and self-interaction
+        interaction_terms = jnp.where((distances < self.radius) & mask, -jnp.inf, jnp.log(1 - self.radius / distances))
     
+        # Sum the interactions for each particle
+        # Since we're excluding double counting with the mask, we can sum over both axes and then divide by 2
+        # However, due to the nature of the problem (each interaction unique and only between pairs), no need to divide
+        f = jnp.sum(interaction_terms, axis=1)
+        
+        # Combine g and f for the final wave function
+        wf = g + f
+
+        breakpoint()
+        
+            
+        return wf #-alpha * self.backend.sum(r**2, axis=1)  # Sum over the coordinates x^2 + y^2 + z^2 for each particle
 
     
 
