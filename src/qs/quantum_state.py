@@ -242,7 +242,7 @@ class QS:
             raise ValueError("Invalid optimizer type, should be 'gd'")
 
     # This should be jittable, but this will be looked at when we start working on training.
-    def train(self, max_iter, batch_size, seed, **kwargs):
+    def train(self, max_iter, batch_size, seed, tol=1e-6, **kwargs):
         """
         Train the wave function parameters.
         Here you should calculate sampler statistics and update the wave function parameters based on the derivative of the (statistical) local energy.
@@ -250,10 +250,11 @@ class QS:
         self._is_initialized()
         self._training_cycles = max_iter
         self._training_batch = batch_size
-
+        self.sampler._log = False   # Hides the sampling progressbar that will 
+                                    # pop-up in each training iteration
         # Define evaluation interval
         eval_interval = max_iter // 10  # Example: Evaluate every 10% of max_iter
-
+        self._log=False
         if self._log:
             t_range = tqdm(
                 range(max_iter),
@@ -265,43 +266,41 @@ class QS:
         else:
             t_range = range(max_iter)
 
+        with tqdm(total=max_iter,
+                desc=rf"[Training progress, alpha={float(self.alpha):.4f}]",
+                position=0,
+                leave=True, 
+                colour="green") as pbar:
+            for iteration in range(max_iter):
 
-
-        for iteration in t_range:
-
-            # Sample data in batches
-            _, sampled_positions, local_energies = self.sample(
-                nsamples=batch_size, nchains=1, seed=seed
-         )
-
-            #sampled positions if of shape (batch_size, nparticles, dim)
-
-            print("Alpha during training", self.alpha)
-
-            grads = (self.alg.grads(sampled_positions))
-
-        
-            first_term = self.backend.mean(grads * local_energies)
-    
-            second_term = self.backend.mean(grads) * self.backend.mean(local_energies)
-
-
-            grads_alpha = 2 * (first_term - second_term)
-           
-    
-            # Ensure alpha and its gradient are iterables
-            self.alpha =self.backend.array(
-                self._optimizer.step([self.alpha], [grads_alpha])
-            )[0]
-
-
-            # Update the alpha in the Parameter instance
-            self.alg.params.set("alpha", self.alpha)
-
+                # Sample data in batches
+                _, sampled_positions, local_energies = self.sample(
+                    nsamples=batch_size, nchains=1, seed=seed
+            )
+                
+                # sampled positions if of shape (batch_size, nparticles, dim)
+                grads = (self.alg.grads(sampled_positions))
+                first_term = self.backend.mean(grads * local_energies)
+                second_term = self.backend.mean(grads) * self.backend.mean(local_energies)
+                grads_alpha = 2 * (first_term - second_term)
+                # Ensure alpha and its gradient are iterables
+                self.alpha = self.backend.array(
+                    self._optimizer.step([self.alpha], [grads_alpha])
+                )[0]
+                # Update the progressbar to show the current alpha value
+                pbar.set_description(rf"[Training progress, alpha={float(self.alpha):.4f}]")
+                pbar.update(1)
+                # Update the alpha in the Parameter instance
+                old_alpha = self.alg.params.get("alpha")
+                diff_alpha = np.abs(old_alpha - self.alpha)
+                if diff_alpha < tol:
+                    print(f"Converged after {iteration} iterations")
+                    break
+                self.alg.params.set("alpha", self.alpha)
+                
+        self.sampler._log = True        # Show the sampling progress after the training has finished
         self._is_trained_ = True
         print("Alpha after training", self.alg.params.get("alpha"))
-
-        #breakpoint()
 
         if self.logger is not None:
             self.logger.info("Training done")

@@ -11,6 +11,7 @@ from qs.utils import generate_seed_sequence
 from qs.utils import sampler_utils
 from qs.utils import State
 from tqdm.auto import tqdm  # progress bar
+import config
 
 
 jax.config.update("jax_enable_x64", True)
@@ -29,7 +30,7 @@ class Sampler:
         self.alg = alg
         self.hami = hamiltonian
         self.step_method = None
-
+        self.n_training_cycles = config.training_cycles
         match backend:
             case "numpy":
                 self.backend = np
@@ -69,8 +70,9 @@ class Sampler:
             self._results = pd.DataFrame(results)
 
         self._sampling_performed_ = True
-        if self._logger is not None:
+        if self._logger is not None and self._log:
             self._logger.info("Sampling done")
+            
 
         return self._results, self._sampled_positions, self._local_energies
 
@@ -109,11 +111,17 @@ class Sampler:
             sampled_positions.append(self.alg.state.positions)
 
         if self._logger is not None:
-            t_range.clear()
+            # t_range.clear()
+            pass
             
 
         # Calculate acceptance rate and convert lists to arrays
-        acceptance_rate = self.alg.state.n_accepted / (nsamples * self.alg._N)
+        # TODO: Should investigate more here
+        if config.training_cycles != 0:
+            acceptance_rate = self.alg.state.n_accepted / (nsamples * self.alg._N * self.n_training_cycles)
+        else:
+            acceptance_rate = self.alg.state.n_accepted / (nsamples * self.alg._N)
+        # acceptance_rate = self.alg.state.n_accepted / (nsamples * self.alg._N)
         local_energies = self.backend.array(local_energies)
         sampled_positions = self.backend.array(sampled_positions)
         mean_positions = self.backend.mean(self.backend.abs(sampled_positions), axis=0)
