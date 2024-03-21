@@ -168,10 +168,10 @@ class VMC:
          # Create a mask to keep off-diagonal elements
         mask = ~jnp.eye(N, dtype=bool)
         
-        distances_masked = self.backend.where(mask, distances, jnp.inf)
+        # distances_masked = jnp.where(mask, distances, jnp.inf)
 
         # Compute f using the masked distances
-        f = self.backend.where(distances_masked < self.radius, jnp.nan, jnp.log(1 - self.radius / distances_masked))
+        f = jnp.log(jnp.where(jnp.where(mask, distances, jnp.inf) < self.radius, 0 , (1 - self.radius / jnp.where(mask, distances, jnp.inf))))
 
 
         wf = g + self.backend.sum(f, axis = 1)
@@ -217,10 +217,13 @@ class VMC:
         """
         computes the gradient of the wavefunction with respect to r, but with jax grad
         """
+        
     
         # Now we use jax.grad to compute the gradient with respect to the first argument (r)
         # Note: jax.grad expects a scalar output, so we sum over the particles to get a single value.
         grad_log_psi = jax.grad(lambda positions: jnp.sum(self.wf_closure(positions, alpha)), argnums=0)
+
+        #breakpoint()
 
         return grad_log_psi(r)
         
