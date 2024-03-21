@@ -92,6 +92,7 @@ class VMC:
 
         if config.interaction == "Coulomb" or config.hamiltonian == "eo":
             self.wf_closure = self.wf_closure_int
+            self.grad_wf_closure = self.wf_closure_int_grad
             if backend != "jax":
                 raise ValueError(f"Backend {self.backend} not supported for Coulomb interaction")
                 
@@ -179,6 +180,67 @@ class VMC:
         #breakpoint()
         return wf 
     
+
+    def wf_closure_int_grad(self, r, alpha):
+        """
+        
+        r: (N, dim) array so that r_i is a dim-dimensional vector
+        alpha: (1,1) array so that alpha is just a number but in the array form
+
+        return: should return a an array of the wavefunction for each particle ( N, )
+
+       OBS: We strongly recommend you work with the wavefunction in log domain. 
+        """
+        
+
+        N , dim = r.shape
+        f= jnp.zeros(N)
+        
+       # Calculate pairwise distances.
+        distances = self.la.norm((r[:, None, :] - r[None, :, :]), axis=-1) + float(1e-12)
+        
+        
+        # Compute f using the masked distances
+        fgrad = self.f_1_grad
+        vmap_fgrad =jax.vmap(fgrad)
+        f = vmap_fgrad(jnp.ravel(distances))
+        ff = f.reshape(N,N)
+        
+        grad_g = jax.grad(lambda positions: jnp.sum(self.g(positions)), argnums=0)
+
+        
+       
+        gradwf = ff + grad_g(r)
+
+        breakpoint()
+
+        
+        return gradwf 
+    
+
+    def g(self,r):
+        alpha = self.params.get("alpha")
+
+        return -alpha * (self.beta**2 * (r[:, 0]**2) + self.backend.sum(r[:, 1:]**2, axis=1)) 
+    
+
+    def f_1_closure(self,r,a):
+        
+        
+        return self.backend.log(1-a/r) *(r>=a) - 1e30*(r<a)
+    
+    def f_1(self,r):
+        a = config.radius
+        
+        return jnp.squeeze(self.f_1_closure(r,a))
+
+    def f_1_grad(self,r):
+        """
+        r should be a scalar |r_j-r_k|
+        """
+
+        return jax.grad(self.f_1)(r)
+
 
     def prob_closure(self, r, alpha):
         """
