@@ -145,7 +145,7 @@ class VMC:
 
     
         return (wf) 
-
+        
     def wf_closure_int(self, r, alpha):
         """
         
@@ -159,35 +159,25 @@ class VMC:
         
         g =  -alpha * (self.beta**2 * (r[:, 0]**2) + self.backend.sum(r[:, 1:]**2, axis=1)) #-alpha * self.backend.sum(r**2, axis=1)  # Sum over the coordinates x^2 + y^2 + z^2 for each particle
 
+        N , dim = r.shape
+        f= jnp.zeros(N)
+        
+       # Calculate pairwise distances.
+        distances = self.la.norm((r[:, None, :] - r[None, :, :]), axis=-1)
+        
+         # Create a mask to keep off-diagonal elements
+        mask = ~jnp.eye(N, dtype=bool)
+        
+        distances_masked = self.backend.where(mask, distances, jnp.inf)
 
-        N ,dim = r.shape
-   
-        # Initialize f as a zero array of shape (N,)
-        f = jnp.zeros(N)
-        
-        # Calculate pairwise distances
-        distances = jnp.sqrt(jnp.sum((r[:, None, :] - r[None, :, :])**2, axis=-1))
-        
-        # Apply interaction function, avoiding singularity and self-interaction
-        # Create a mask to exclude self-interactions and ensure interactions are only counted once
-        mask = jnp.triu(jnp.ones((N, N), dtype=bool), k=1)
-        
-        # Apply interaction function, avoiding singularity and self-interaction
-        interaction_terms = jnp.where((distances < self.radius) & mask, -jnp.inf, jnp.log(1 - self.radius / distances))
-    
-        # Sum the interactions for each particle
-        # Since we're excluding double counting with the mask, we can sum over both axes and then divide by 2
-        # However, due to the nature of the problem (each interaction unique and only between pairs), no need to divide
-        f = jnp.sum(interaction_terms, axis=1)
-        
-        # Combine g and f for the final wave function
-        wf = g + f
+        # Compute f using the masked distances
+        f = self.backend.where(distances_masked < self.radius, jnp.nan, jnp.log(1 - self.radius / distances_masked))
 
-        breakpoint()
-        
-            
-        return wf #-alpha * self.backend.sum(r**2, axis=1)  # Sum over the coordinates x^2 + y^2 + z^2 for each particle
 
+        wf = g + self.backend.sum(f, axis = 1)
+
+        #breakpoint()
+        return wf 
     
 
     def prob_closure(self, r, alpha):
