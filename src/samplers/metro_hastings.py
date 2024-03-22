@@ -75,7 +75,7 @@ class MetropolisHastings(Sampler):
         # Calculate wave function squared for current and proposed positions
         prob_current = wf_squared(initial_positions)
         prob_proposed = wf_squared(proposed_positions)
-
+        
         # Calculate the q - value
         q_value, proposed_positions = self.importance_sampling_interior(initial_positions,
                                                                         proposed_positions,
@@ -101,6 +101,7 @@ class MetropolisHastings(Sampler):
         state.n_accepted = n_accepted
         state.delta += 1
         state.positions = new_positions
+        state.r_dist = new_positions[None, ... ] - new_positions[:, None, :]
 
 
     def importance_sampling_interior(self,

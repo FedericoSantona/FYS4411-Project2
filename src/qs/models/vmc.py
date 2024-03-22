@@ -42,8 +42,8 @@ class VMC:
         if beta: 
             self.beta = beta
 
-        self._initialize_vars(nparticles, dim, log, logger, logger_level)        
         self.state = 0 # take a look at the qs.utils State class
+        self._initialize_vars(nparticles, dim, log, logger, logger_level)        
 
         if self.log:
             msg = f"""VMC initialized with {self._N} particles in {self._dim} dimensions with {
@@ -85,7 +85,7 @@ class VMC:
             self.grad_wf_closure = self.grad_wf_closure_jax
             self.grads_closure = self.grads_closure_jax
             self.laplacian_closure = self.laplacian_closure_jax
-            #self._jit_functions()
+            self._jit_functions()
         else:
             raise ValueError(f"Backend {self.backend} not supported")
         
@@ -145,7 +145,7 @@ class VMC:
 
     
         return (wf) 
-        
+    
     def wf_closure_int(self, r, alpha):
         """
         
@@ -154,29 +154,18 @@ class VMC:
 
         return: should return a an array of the wavefunction for each particle ( N, )
 
-       OBS: We strongly recommend you work with the wavefunction in log domain. 
+        OBS: We strongly recommend you work with the wavefunction in log domain. 
         """
         
-        g =  -alpha * (self.beta**2 * (r[:, 0]**2) + self.backend.sum(r[:, 1:]**2, axis=1)) #-alpha * self.backend.sum(r**2, axis=1)  # Sum over the coordinates x^2 + y^2 + z^2 for each particle
-
-        N , dim = r.shape
-        f= jnp.zeros(N)
-        
-       # Calculate pairwise distances.
-        distances = self.la.norm((r[:, None, :] - r[None, :, :]), axis=-1)
-        
-         # Create a mask to keep off-diagonal elements
-        mask = ~jnp.eye(N, dtype=bool)
-        
-        distances_masked = self.backend.where(mask, distances, jnp.inf)
-
+        g =  -alpha * (self.beta**2 * (r[:, 0]**2) + self.backend.sum(r[:, 1:]**2, axis=1)) # Sum over the coordinates x^2 + y^2 + z^2 for each particle
+        # Calculate pairwise distances.
+        # breakpoint()
+        distances = self.la.norm(self.state.r_dist, axis=-1)
         # Compute f using the masked distances
-        f = self.backend.where(distances_masked < self.radius, jnp.nan, jnp.log(1 - self.radius / distances_masked))
-
+        f = jnp.log(jnp.where(distances < self.radius, 0, 1 - self.radius / distances) + jnp.eye(r.shape[0]))
 
         wf = g + self.backend.sum(f, axis = 1)
-
-        #breakpoint()
+        # breakpoint()
         return wf 
     
 
@@ -221,7 +210,8 @@ class VMC:
         # Now we use jax.grad to compute the gradient with respect to the first argument (r)
         # Note: jax.grad expects a scalar output, so we sum over the particles to get a single value.
         grad_log_psi = jax.grad(lambda positions: jnp.sum(self.wf_closure(positions, alpha)), argnums=0)
-
+        
+        
         return grad_log_psi(r)
         
 
@@ -256,36 +246,10 @@ class VMC:
         # times the sum of the squares of the positions, since the wavefunction is exp(-alpha * sum(r_i^2)).
         grad_alpha = self.backend.sum( -self.backend.sum(r**2, axis=2) , axis = 1)  # The gradient with respect to alpha
 
-        #breakpoint()
+        
         return grad_alpha
 
     def grads_closure_jax(self, r, alpha):
-    
-        """
-        pos = r
-        var = alpha
-        batches = r.shape[0]
-        grad_alpha = []
-
-
-        for b in range(batches):  
-
-            pos_b =r[b]
-        
-            grad_alpha_fn = jax.grad(lambda a: jnp.sum(self.wf_closure(r[b] , a)) , argnums= 0)
-
-            support = grad_alpha_fn(alpha) 
-
-            grad_alpha.append(support)
-
-            breakpoint()
-
-
-        
-        grad_alpha = jnp.array(grad_alpha) 
-
-        """
-
         """
         Computes the gradient of the wavefunction with respect to the variational parameters with JAX grad using Vmap.
         """
@@ -348,8 +312,8 @@ class VMC:
 
         #print("r shape ", r.shape)
         r = r.reshape(1,d)        
-        first_term = jnp.trace(hessian_psi(r).reshape(d, d))
-        second_term = jnp.sum(self.grad_wf_closure(r, alpha) ** 2)
+        first_term = jnp.trace(hessian_psi(r)[0].reshape(d, d))         # The hessian is nested like a ... onion
+        second_term = 0.25 * jnp.sum(self.grad_wf_closure(r, alpha) ** 2)
         laplacian = first_term + second_term
         
         return laplacian
@@ -359,7 +323,6 @@ class VMC:
         """
         assert isinstance(nparticles, int), "nparticles must be an integer"
         assert isinstance(dim, int), "dim must be an integer"
-
         self._N = nparticles
         self._dim = dim
         self._log = log if log else False
@@ -376,13 +339,14 @@ class VMC:
         # Note: We split the RNG key to ensure subsequent uses of RNG don't reuse the same state.
         key, subkey = random.split(self.rng)
         initial_positions = random.normal(subkey, (nparticles, dim))  # Using JAX for random numbers
-
-
         # Initialize logp, assuming a starting value or computation
         a = self.params.get("alpha")  # Using Parameter.get to access alpha
-        initial_logp = self.prob_closure(initial_positions , a)  # Now I use the log of the modulus of wave function, can be changed
+        initial_logp = 0 # self.prob_closure(initial_positions , a)  # Now I use the log of the modulus of wave function, can be changed
 
+        
         self.state = State(positions=initial_positions, logp=initial_logp , n_accepted= 0 , delta = 0)
+        self.state.r_dist = initial_positions[None, ...] - initial_positions[:, None, :]
+        
 
     def _initialize_variational_params(self , alpha = None ):
         # Initialize variational parameters in the correct range with the correct shape

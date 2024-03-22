@@ -74,6 +74,7 @@ class HarmonicOscillator(Hamiltonian):
         laplacian = 0
         for i in range(self._N):
             laplacian += self.alg_int.laplacian(r[i])
+            
         return -0.5 * laplacian
     
     def local_energy(self, wf, r):
@@ -104,7 +105,6 @@ class EllipticOscillator(HarmonicOscillator):
         int_energy = 0
 
         if self._int_type == "Coulomb":
-        
             r_copy = r.copy()
             r_dist = self.la.norm(r_copy[None, ...] - r_copy[:, None, :], axis=-1)
             r_dist = self.backend.where(r_dist < config.radius, 0, r_dist)                 # Should be edited to be self.radius or something, not 0.0043
@@ -128,6 +128,7 @@ class EllipticOscillator(HarmonicOscillator):
         # Assuming r is structured as [nparticles, dim], and the first column is x, second is y, and the third is z.
         pe = self.potential_energy(r)
         ke = self.kinetic_energy(r)
+        
         # Kinetic Energy using automatic differentiation on the log of the wavefunction 
         #print(" laplacian shape ", self.backend.sum(self.alg_int.laplacian(r)).shape)
         #laplacian = self.backend.sum(self.alg_int.laplacian(r)) this was more efficient tho :(
