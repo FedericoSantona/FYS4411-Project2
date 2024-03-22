@@ -82,7 +82,7 @@ ax[0].legend()
 # Plot 2: Blocking Variance vs Normal Variance on the second subplot
 ax[1].plot(block_sizes, variances_bl, label="Normal Variance", marker='o', linestyle='-')
 ax[1].plot(block_sizes, variances_block, label="Blocking Variance", marker='x', linestyle='--')
-ax[1].set_xlabel("Number of Bootstraps")
+ax[1].set_xlabel("Block Size")
 ax[1].set_ylabel("Variance")
 ax[1].set_title("Variance Comparison: Blocking vs Normal")
 ax[1].legend()
@@ -92,13 +92,21 @@ plt.tight_layout()
 
 # Save the figure as a single image
 plt.savefig("variance_comparisons.png")
+plt.show()
 
+# clean the figure and start new plot
+plt.clf()
+
+#change the fig size for the plot
 
 #COmpare bootstrapping and blocking
+plt.figure(figsize=(12,8))
 plt.plot(n_boot_values, variances_boot ,  label="Variance with bootstrap", marker='o', linestyle='-')
-plt.plot(block_sizes, variances_block ,  label="Variance with Blocking", marker='x', linestyle='--')
+plt.plot(n_boot_values, variances_block ,  label="Variance with Blocking", marker='x', linestyle='--')
 plt.xlabel("Number of Bootstraps  / Block sizes")
 plt.ylabel("Variance")
+
 plt.title("Variance Comparison: Bootstrapping vs Blocking")
 plt.legend()
-plt.savefig("variance_comparisons_boot_blocking.png")
+plt.savefig("boot_vs_blocking.png")
+plt.show()
