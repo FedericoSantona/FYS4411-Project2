@@ -102,6 +102,8 @@ class MetropolisHastings(Sampler):
         state.delta += 1
         state.positions = new_positions
 
+        #breakpoint()
+
 
     def importance_sampling_interior(self,
                                      initial_positions,

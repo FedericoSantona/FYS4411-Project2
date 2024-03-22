@@ -5,21 +5,21 @@ nparticles = 4
 dim = 3
 nsamples =  int(2**12) #  2**18 = 262144
 scale = 1 + (dim-1)*0.1
-nchains = 4# number of Markov chains. When you parallelize, you can set this to the number of cores. Note you will have to implement this yourself.
-eta = 0 #0.001
-training_cycles = 0 #500 # this is cycles for the ansatz
+nchains = 1# number of Markov chains. When you parallelize, you can set this to the number of cores. Note you will have to implement this yourself.
+eta = 0.001
+training_cycles = 500 # this is cycles for the ansatz
 mcmc_alg = "mh" # eiteer "mh" or "m"
-backend = "jax" # or "numpy" but jax should go faster because of the jit
+backend = "numpy" # or "numpy" but jax should go faster because of the jit
 optimizer = "gd"
-hamiltonian = "eo" # either ho or eo 
+hamiltonian = "ho" # either ho or eo 
 interaction = "None" # either Coulomb or None
-radius =  0.0043
-batch_size = 0 # 200
+radius =  0 # 0.0043
+batch_size =  200
 detailed = True
 wf_type = "vmc" 
 seed = 142
-alpha = 0.5
-beta = 2.82843
+alpha = 0.2
+beta = 1 #2.82843
 
 
 #only important for Metropolis hastings:

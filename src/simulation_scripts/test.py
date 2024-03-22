@@ -1,15 +1,18 @@
 import jax.numpy as jnp
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib
+from jax import vmap
 
+# Define a simple function that adds two numbers
+def add(x, y):
+    return x + y
 
-E = 100e6
-dm2 = 7.5e-5
+# Vectorize the function using vmap
+vectorized_add = vmap(add)
 
+# Prepare input arrays
+x_array = jnp.array([1, 2, 3, 4])
+y_array = jnp.array([5, 6, 7, 8])
 
-x = 2*np.pi*E / dm2
+# Execute the vectorized function on arrays
+result = vectorized_add(x_array, y_array)
 
-y = x* 197.327e-4
-
-print(y)
+print(result)

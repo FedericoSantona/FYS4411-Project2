@@ -33,7 +33,7 @@ def setup_and_train(backend, delta_t):
     
     # Setup and training process
     system.set_wf(config.wf_type, config.nparticles, config.dim)
-    system.set_hamiltonian(type_=config.hamiltonian, int_type="Coulomb", omega=1.0)
+    system.set_hamiltonian(type_=config.hamiltonian, int_type=config.interaction, omega=1.0)
     system.set_sampler(mcmc_alg=config.mcmc_alg, scale=config.scale)
     system.set_optimizer(optimizer=config.optimizer, eta=config.eta)
     system.train(max_iter=config.training_cycles, batch_size=config.batch_size, seed=config.seed)
