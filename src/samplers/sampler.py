@@ -117,7 +117,7 @@ class Sampler:
 
         # Calculate acceptance rate and convert lists to arrays
         # TODO: Should investigate more here
-        if config.training_cycles != 0:
+        if config.training_cycles != 0 and nsamples != 0:
             acceptance_rate = self.alg.state.n_accepted / (nsamples * self.alg._N * self.n_training_cycles)
         else:
             acceptance_rate = self.alg.state.n_accepted / (nsamples * self.alg._N)

@@ -71,10 +71,15 @@ class HarmonicOscillator(Hamiltonian):
     def kinetic_energy(self, r):
         """Kinetic energy of the system"""
         # I believe there should be a way to easily parallelize this for loop (i.e split it into smaller for-loops that run in parallel)
+        
         laplacian = 0
         for i in range(self._N):
             laplacian += self.alg_int.laplacian(r[i])
-            
+            # if jnp.abs(self.alg_int.laplacian(r[i])) > 20:
+            #     print(f"term1: {self.alg_int.first_term}, term2: {self.alg_int.second_term}"
+            #           + "\n" + f"term3: {self.alg_int.third_term}, term4: {self.alg_int.fourth_term}")
+                # breakpoint()
+
         return -0.5 * laplacian
     
     def local_energy(self, wf, r):
@@ -140,7 +145,10 @@ class EllipticOscillator(HarmonicOscillator):
         
         # Correct calculation of local energy
         local_energy =  ke + pe
-
+        # if np.abs(local_energy) > 40:
+            
+        #     breakpoint() 
+        # breakpoint()
         #local_energy = self.backend.array(local_energy)
         #local_energy = local_energy.reshape((1, 1))
 

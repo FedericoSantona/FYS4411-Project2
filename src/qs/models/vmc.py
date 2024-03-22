@@ -92,6 +92,10 @@ class VMC:
 
         if config.interaction == "Coulomb" or config.hamiltonian == "eo":
             self.wf_closure = self.wf_closure_int
+        
+        if config.interaction == "Coulomb" and config.hamiltonian == "eo":
+            self.laplacian_closure = self.anal_laplacian_closure_int
+
             if backend != "jax":
                 raise ValueError(f"Backend {self.backend} not supported for Coulomb interaction")
                 
@@ -130,6 +134,23 @@ class VMC:
 
 
     
+    def wf_closure_train(self, r, alpha):
+        """
+        
+        r: (N, dim) array so that r_i is a dim-dimensional vector
+        alpha: (N, dim) array so that alpha_i is a dim-dimensional vector
+
+        return: should return Ψ(alpha, r)
+
+        OBS: We strongly recommend you work with the wavefunction in log domain. 
+
+        """
+        wf = -alpha * (self.beta**2 * (r[:, 0]**2) + self.backend.sum(r[:, 1:]**2, axis=1))
+
+    
+        return (wf) 
+    
+
     def wf_closure(self, r, alpha):
         """
         
@@ -163,9 +184,9 @@ class VMC:
         distances = self.la.norm(self.state.r_dist, axis=-1)
         # Compute f using the masked distances
         f = jnp.log(jnp.where(distances < self.radius, 0, 1 - self.radius / distances) + jnp.eye(r.shape[0]))
-
-        wf = g + self.backend.sum(f, axis = 1)
-        # breakpoint()
+        f_term = self.backend.sum(f, axis = 1)
+        wf = g + f_term
+        
         return wf 
     
 
@@ -256,7 +277,7 @@ class VMC:
 
         # Define the gradient function for a single instance
         def single_grad(pos, var):
-            return jax.grad(lambda a: jnp.sum(self.wf_closure(pos, a)))(var) 
+            return jax.grad(lambda a: jnp.sum(self.wf_closure_train(pos, a)))(var) 
         
         # Vectorize the gradient computation over the batch dimension
         batched_grad = jax.vmap(single_grad, (0, None), 0)
@@ -299,6 +320,40 @@ class VMC:
     
         return laplacian
 
+    def uprime(self, rij):
+        return self.radius / (rij ** 2 - self.radius * rij)
+    
+    def u_double_prime(self, rij):
+        return self.radius * (self.radius - 2 * rij) / ((rij ** 2 - self.radius * rij) ** 2)
+
+    def anal_laplacian_closure_int(self, r, alpha):
+        """Something something soon easter boys - this should take osme arguments and return some value? 
+        """
+        
+        k_indx = np.where(self.state.positions == r)[0][0]
+        k_distances = self.la.norm(self.state.r_dist + 1e-8, axis=-1)[k_indx]
+        self.k_distances = jnp.delete(k_distances, k_indx, axis=0)
+        r_dist = self.state.positions - r + 1e-8
+        r_dist = jnp.delete(r_dist, k_indx, axis=0)
+        x, y, z = r
+        self.grad_phi = - 2 * alpha * jnp.array([x, y, self.beta * z])
+        self.grad_phi_square = 4 * alpha ** 2 * (x ** 2 + y ** 2 + self.beta ** 2 * z ** 2) - 2 * alpha * (self.beta + 2)
+        # if jnp.any(np.abs(self.k_distances) < self.radius):
+        #     breakpoint()
+        
+        self.first_term = self.grad_phi_square
+        
+        self.second_term_sum = jnp.sum((r_dist.T / self.k_distances * self.uprime(self.k_distances)).T, axis=0)  # sum downwards, to keep it as a vector
+        
+        self.second_term = 2 * jnp.dot(self.grad_phi, self.second_term_sum)
+        self.third_term = jnp.dot(self.second_term_sum, self.second_term_sum)
+        self.fourth_term = jnp.sum(self.u_double_prime(self.k_distances) + 2 / self.k_distances * self.uprime(self.k_distances))
+
+        self.anal_laplacian = self.first_term + self.second_term + self.third_term + self.fourth_term
+    
+        return self.anal_laplacian
+
+
     def laplacian_closure_jax(self, r, alpha):
       
         """
@@ -309,11 +364,11 @@ class VMC:
         # Compute the Hessian (second derivative matrix) of the wavefunction
         hessian_psi = jax.hessian(self.wf, argnums=0)           # The hessian matrix for our wavefunction
         d = self._dim
-
+        
         #print("r shape ", r.shape)
         r = r.reshape(1,d)        
         first_term = jnp.trace(hessian_psi(r)[0].reshape(d, d))         # The hessian is nested like a ... onion
-        second_term = 0.25 * jnp.sum(self.grad_wf_closure(r, alpha) ** 2)
+        second_term = jnp.sum(self.grad_wf_closure(r, alpha) ** 2)
         laplacian = first_term + second_term
         
         return laplacian
