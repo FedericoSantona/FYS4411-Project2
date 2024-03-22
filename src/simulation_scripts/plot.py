@@ -28,12 +28,11 @@ All the parameters you want to change are contained in the file config.py
 """
 # set up the system with its backend and level of logging, seed, and other general properties depending on how you want to run it
 
-alpha_values = np.array([0.3, 0.4, 0.5, 0.6, 0.7 , 0.8 , 0.9 , 1.0 ])
+alpha_values = np.array([ 0.2 , 0.3, 0.4, 0.5, 0.6, 0.7 , 0.8, 0.9, 1.0])
 energies = []
 variances = []
 error = []
-variances_analytical = []
-energies_analytical = []
+
 
 for i in alpha_values:
     
@@ -46,8 +45,10 @@ for i in alpha_values:
     seed=config.seed,
     alpha=i,
     beta=config.beta,
+    radius = config.radius,
     time_step=config.time_step,
-    diffusion_coeff=config.diffusion_coeff
+    diffusion_coeff=config.diffusion_coeff,
+    type_hamiltonian = config.hamiltonian
     )
 
 
@@ -60,7 +61,7 @@ for i in alpha_values:
 
 
     # choose the hamiltonian
-    system.set_hamiltonian(type_=config.hamiltonian, int_type="Coulomb", omega=1.0)
+    system.set_hamiltonian(type_=config.hamiltonian, int_type=config.interaction, omega=1.0)
 
 
     # choose the sampler algorithm and scale
@@ -83,24 +84,21 @@ for i in alpha_values:
     # now we get the results or do whatever we want with them
     results, _, _ = system.sample(config.nsamples, nchains=config.nchains, seed=config.seed)
 
-    energy_analytical =  0.25* ( 2* i + 1/(2*i))
 
-    variance_analytical = 0.25*(1+(1-4*i**2)**2 * 3/(16*i**2)) - energy_analytical**2
 
     print("alpha", i)
     print("energy", results.energy)
     energies.append(results.energy)
     error.append(results.std_error)
     variances.append(results.variance)
-    variances_analytical.append(variance_analytical)
-    energies_analytical.append(energy_analytical)
+   
 
 
 print("Alpha values", alpha_values)
 print("Energies", energies)
 print("Errors", error)
 print("Variances", variances)
-print("Variances analytical", variances_analytical)
+
 
 fig, ax = plt.subplots(2, figsize=(10, 10))
 

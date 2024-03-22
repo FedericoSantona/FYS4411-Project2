@@ -29,7 +29,8 @@ class VMC:
         self.log = log
         self._seed = seed
         self._logger = logger
-        self._N = nparticles         
+        self._N = nparticles     
+        self._dim = dim    
         self.radius = config.radius
         self.beta = beta
         self.rng = random.PRNGKey(self._seed)  # Initialize RNG with the provided seed
@@ -85,14 +86,14 @@ class VMC:
             self.grad_wf_closure = self.grad_wf_closure_jax
             self.grads_closure = self.grads_closure_jax
             self.laplacian_closure = self.laplacian_closure_jax
-            #self._jit_functions()
+            self._jit_functions()
         else:
             raise ValueError(f"Backend {self.backend} not supported")
         
 
         if config.interaction == "Coulomb" or config.hamiltonian == "eo":
+            print("Coulomb interaction")
             self.wf_closure = self.wf_closure_int
-            self.grad_wf_closure = self.wf_closure_int_grad
             if backend != "jax":
                 raise ValueError(f"Backend {self.backend} not supported for Coulomb interaction")
                 
@@ -208,14 +209,52 @@ class VMC:
         
         grad_g = jax.grad(lambda positions: jnp.sum(self.g(positions)), argnums=0)
 
-        
-       
-        gradwf = ff + grad_g(r)
+        mask = jnp.where(jnp.eye(N,dtype=float)!=1.0)
+        ff = ff[mask].reshape(N,dim)
 
-        breakpoint()
+        gradwf = ff + grad_g(r)
 
         
         return gradwf 
+    
+
+    def wf_closure_int_hessian(self, r, alpha):
+        """
+        
+        r: (N, dim) array so that r_i is a dim-dimensional vector
+        alpha: (1,1) array so that alpha is just a number but in the array form
+
+        return: should return a an array of the wavefunction for each particle ( N, )
+
+       OBS: We strongly recommend you work with the wavefunction in log domain. 
+        """
+        
+
+        N = self._N
+        dim = self._dim
+        pos = r 
+        breakpoint()
+        f= jnp.zeros(N)
+        
+       # Calculate pairwise distances.
+        distances = self.la.norm((r[:, None, :] - r[None, :, :]), axis=-1) 
+        
+        
+        # Compute f using the masked distances
+        fgrad =jax.grad(self.f_1_grad)
+        vmap_fgrad =jax.vmap(fgrad)
+        f = vmap_fgrad(jnp.ravel(distances))
+        ff = f.reshape(N,N)
+        
+        grad_g = jax.grad(jax.grad(lambda positions: jnp.sum(self.g(positions)), argnums=0))
+
+        mask = jnp.where(jnp.eye(N,dtype=float)!=1.0)
+        ff = ff[mask].reshape(N,dim)
+
+        hessianwf = ff + grad_g(r)
+
+        
+        return hessianwf
     
 
     def g(self,r):
@@ -410,10 +449,31 @@ class VMC:
         # Compute the Hessian (second derivative matrix) of the wavefunction
         hessian_psi = jax.hessian(self.wf, argnums=0)           # The hessian matrix for our wavefunction
         d = self._dim
-
+       
         #print("r shape ", r.shape)
         r = r.reshape(1,d)        
         first_term = jnp.trace(hessian_psi(r).reshape(d, d))
+        #breakpoint()
+        second_term = jnp.sum(self.grad_wf_closure(r, alpha) ** 2)
+        laplacian = first_term + second_term
+        
+        return laplacian
+    
+    def laplacian_closure_jax_int(self, r, alpha):
+      
+        """
+        Computes the Laplacian of the wavefunction for each particle using JAX automatic differentiation.
+        r: Position array of shape (n_particles, n_dimensions)
+        alpha: Parameter(s) of the wavefunction
+        """
+        # Compute the Hessian (second derivative matrix) of the wavefunction
+        hessian_psi = self.wf_closure_int_hessian(r , alpha)       # The hessian matrix for our wavefunction
+        d = self._dim
+    
+        #print("r shape ", r.shape)
+        r = r.reshape(1,d)        
+        first_term = jnp.trace(hessian_psi(r).reshape(d, d))
+        #breakpoint()
         second_term = jnp.sum(self.grad_wf_closure(r, alpha) ** 2)
         laplacian = first_term + second_term
         

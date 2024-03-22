@@ -58,11 +58,15 @@ class Metropolis(Sampler):
             log_psi_proposed=prob_proposed,
         )
 
+
+
         # Create new state by updating state variables.
         state.logp = new_logp
         state.n_accepted = n_accepted
         state.delta += 1
         state.positions = new_positions
+
+        #breakpoint()
 
     def accept_func(
         self,

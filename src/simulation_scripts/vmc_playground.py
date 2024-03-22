@@ -18,6 +18,9 @@ import jax
 
 from qs import quantum_state
 import config
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
 
 
 jax.config.update("jax_enable_x64", True)
@@ -39,6 +42,7 @@ system = quantum_state.QS(
     seed=config.seed,
     alpha=config.alpha,
     beta=config.beta,
+    radius = config.radius,
     time_step=config.time_step,
     diffusion_coeff=config.diffusion_coeff
 )
@@ -53,7 +57,7 @@ system.set_wf(
  
 
 # choose the hamiltonian
-system.set_hamiltonian(type_=config.hamiltonian, int_type="Coulomb", omega=1.0)
+system.set_hamiltonian(type_=config.hamiltonian, int_type=config.interaction, omega=1.0)
 
 # choose the sampler algorithm and scale
 system.set_sampler(mcmc_alg=config.mcmc_alg, scale=config.scale)
@@ -68,7 +72,7 @@ system.set_optimizer(
 print("System initialization: Complete..")
 
 # train the system, meaning we find the optimal variational parameters for the wave function
-system.train(
+alphas ,cycles = system.train(
     max_iter=config.training_cycles,
     batch_size=config.batch_size,
     seed=config.seed,
@@ -86,4 +90,14 @@ print("Result Energy: ", results.energy)
 print(f"Acceptance rate: {results.accept_rate}")
 
 print(f"Execution time: {execution_time} seconds")
+
+
+#plot alphas vs iteractions
+
+plt.plot(cycles, alphas)
+plt.xlabel("Iterations")
+plt.ylabel("Alpha")
+plt.title("Alpha vs Iterations")
+plt.legend("Alpha")
+plt.savefig("alpha_vs_iterations.png")
 

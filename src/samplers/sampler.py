@@ -110,6 +110,9 @@ class Sampler:
             local_energies.append(E_loc)                    # Store local energy
             sampled_positions.append(self.alg.state.positions)
 
+
+            #breakpoint()
+
         if self._logger is not None:
             # t_range.clear()
             pass
