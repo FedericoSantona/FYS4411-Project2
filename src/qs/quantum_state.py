@@ -285,7 +285,7 @@ class QS:
                 
                 # sampled positions if of shape (batch_size, nparticles, dim)
                 grads = (self.alg.grads(sampled_positions))
-                first_term = self.backend.mean(grads * local_energies)
+                first_term = self.backend.mean(grads.reshape(self._training_batch, 1) * local_energies.reshape(self._training_batch, 1))
                 second_term = self.backend.mean(grads) * self.backend.mean(local_energies)
                 grads_alpha = 2 * (first_term - second_term)
                 
@@ -295,6 +295,7 @@ class QS:
                 self.alpha = self.backend.array(
                     self._optimizer.step([self.alpha], [grads_alpha])
                 )[0]
+                
                 # Update the progressbar to show the current alpha value
                 pbar.set_description(rf"[Training progress, alpha={float(self.alpha):.4f}]")
                 pbar.update(1)
@@ -302,8 +303,9 @@ class QS:
                 old_alpha = self.alg.params.get("alpha")
                 diff_alpha = np.abs(old_alpha - self.alpha)
                 if diff_alpha < tol:
-                    print(f"Converged after {iteration} iterations")
-                    break
+                    pass
+                    # print(f"Converged after {iteration} iterations")
+                    # break
                 self.alg.params.set("alpha", self.alpha)
                 
         self.sampler._log = True        # Show the sampling progress after the training has finished

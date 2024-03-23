@@ -27,6 +27,7 @@ class State:
 
     def __init__(self, positions, logp, n_accepted=0, delta=0):
         self.positions = positions
+        self.r_dist = self.positions[None, ...] - self.positions[:, None, :]
         self.logp = logp
         self.n_accepted = n_accepted
         self.delta = delta

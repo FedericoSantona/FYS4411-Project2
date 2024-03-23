@@ -65,6 +65,7 @@ class Metropolis(Sampler):
         state.n_accepted = n_accepted
         state.delta += 1
         state.positions = new_positions
+        state.r_dist = new_positions[None, ... ] - new_positions[:, None, :]
 
         #breakpoint()
 
