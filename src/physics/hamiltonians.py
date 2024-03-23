@@ -126,7 +126,7 @@ class EllipticOscillator(HarmonicOscillator):
         """
         # Adjust the potential energy calculation for the elliptic oscillator
         # Assuming r is structured as [nparticles, dim], and the first column is x, second is y, and the third is z.
-        pe =  0.5 * self.backend.sum(self.backend.sum(r**2, axis=1))   + self.potential_energy(r)
+        pe = self.potential_energy(r)
         ke = self.kinetic_energy(r)
         # Kinetic Energy using automatic differentiation on the log of the wavefunction 
         #print(" laplacian shape ", self.backend.sum(self.alg_int.laplacian(r)).shape)

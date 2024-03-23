@@ -107,14 +107,14 @@ fig, ax = plt.subplots(2, figsize=(10, 10))
 ax[0].plot(alpha_values, energies, "o-", label="Energy")
 ax[0].set_xlabel("Alpha")
 ax[0].set_ylabel("Energy")
-ax[0].set_title("Energy as a function of alpha in analytical calculation")
+ax[0].set_title("Energy as a function of alpha in JAX calculation , N = 10 , dim = 3")
 ax[0].legend()
 
 # Plotting Variance
 ax[1].plot(alpha_values, variances, "o-", label="Variance")
 ax[1].set_xlabel("Alpha")
 ax[1].set_ylabel("Variance")
-ax[1].set_title("Variance as a function of alpha in analytical calculation")
+ax[1].set_title("Variance as a function of alpha in JAX calculation , N = 10 , dim = 3")
 ax[1].legend()
 
 
