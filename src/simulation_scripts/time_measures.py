@@ -34,7 +34,7 @@ def setup_and_train(backend, n_sample):
     
     # Setup and training process
     system.set_wf(config.wf_type, config.nparticles, config.dim)
-    system.set_hamiltonian(type_=config.hamiltonian, int_type="Coulomb", omega=1.0)
+    system.set_hamiltonian(type_=config.hamiltonian, int_type=config.interaction, omega=1.0)
     system.set_sampler(mcmc_alg=config.mcmc_alg, scale=config.scale)
     system.set_optimizer(optimizer=config.optimizer, eta=config.eta)
     system.train(max_iter=config.training_cycles, batch_size=config.batch_size, seed=config.seed)
@@ -61,14 +61,14 @@ ax[0].plot(np.log2(sample_values), times_ana, label="Numpy")
 ax[0].plot(np.log2(sample_values), times_jax, label="Jax")
 ax[0].set_xlabel("Log2(Number of samples)")
 ax[0].set_ylabel("Execution time [s]")
-ax[0].set_title("Execution time for different number of samples")
+ax[0].set_title("Execution time for different number of samples, N=10 , dim = 3")
 ax[0].legend()
 
 # Second plot: Difference in execution times
 ax[1].plot(np.log2(sample_values), times_difference, label="Difference (Numpy - Jax)", color='red')
 ax[1].set_xlabel("Log2(Number of samples)")
 ax[1].set_ylabel("Difference in execution time [s]")
-ax[1].set_title("Difference in execution time between Numpy and Jax")
+ax[1].set_title("Difference in execution time between Numpy and Jax ,N=10 , dim = 3")
 ax[1].legend()
 
 plt.tight_layout()  # Adjust layout to prevent overlap

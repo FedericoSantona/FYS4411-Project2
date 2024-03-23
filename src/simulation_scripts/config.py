@@ -9,7 +9,7 @@ nchains = 1#4# number of Markov chains. When you parallelize, you can set this t
 eta = 0 #0.001
 training_cycles = 0 #500 # this is cycles for the ansatz
 mcmc_alg = "mh" # eiteer "mh" or "m"
-backend = "jax" # or "numpy" but jax should go faster because of the jit
+backend = "numpy" # or "numpy" but jax should go faster because of the jit
 optimizer = "gd"
 hamiltonian = "eo" # either ho or eo 
 interaction = "Coulomb" # either Coulomb or None
@@ -18,8 +18,8 @@ batch_size = 0 # 200
 detailed = True
 wf_type = "vmc" 
 seed = 142
-alpha = 0.5
-beta = 2.82843
+alpha = 0.2
+beta = 1 #2.82843
 
 
 #only important for Metropolis hastings:

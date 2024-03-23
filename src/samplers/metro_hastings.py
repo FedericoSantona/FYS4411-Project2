@@ -103,6 +103,8 @@ class MetropolisHastings(Sampler):
         state.positions = new_positions
         state.r_dist = new_positions[None, ... ] - new_positions[:, None, :]
 
+        #breakpoint()
+
 
     def importance_sampling_interior(self,
                                      initial_positions,

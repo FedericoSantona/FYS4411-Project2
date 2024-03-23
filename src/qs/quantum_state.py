@@ -11,6 +11,7 @@ from qs.utils import check_and_set_nchains
 from samplers.sampler import Sampler
 import jax
 import jax.numpy as jnp
+from jax import random
 
 jax.config.update("jax_enable_x64", True)
 jax.config.update("jax_platform_name", "cpu")
@@ -97,7 +98,11 @@ class QS:
             case "jax":
                 self.backend = jnp
                 self.la = jnp.linalg
-                # You might also be able to jit some functions here
+                # You might also be able to jit some functions herebo
+
+                self.bootstrap = self.bootstrap_jax
+                #JIT?
+
             case _:  # noqa
                 raise ValueError("Invalid backend:", backend)
 
@@ -252,8 +257,8 @@ class QS:
         self._training_batch = batch_size
         self.sampler._log = False   # Hides the sampling progressbar that will 
                                     # pop-up in each training iteration
-        # Define evaluation interval
-        eval_interval = max_iter // 10  # Example: Evaluate every 10% of max_iter
+        alphas = []
+        cycles = []
         self._log=False
         if self._log:
             t_range = tqdm(
@@ -283,6 +288,9 @@ class QS:
                 first_term = self.backend.mean(grads.reshape(self._training_batch, 1) * local_energies.reshape(self._training_batch, 1))
                 second_term = self.backend.mean(grads) * self.backend.mean(local_energies)
                 grads_alpha = 2 * (first_term - second_term)
+                
+                alphas.append(self.alpha)
+                cycles.append(iteration)
                 # Ensure alpha and its gradient are iterables
                 self.alpha = self.backend.array(
                     self._optimizer.step([self.alpha], [grads_alpha])
@@ -306,6 +314,8 @@ class QS:
 
         if self.logger is not None:
             self.logger.info("Training done")
+
+        return alphas , cycles
 
     def sample(self, nsamples, nchains=1, seed=None):
         """helper for the sample method from the Sampler class"""
@@ -333,7 +343,7 @@ class QS:
 
         return self._results, sampled_positions, local_energies
 
-    def bootstrap(self, X):
+    def bootstrap(self, X ):
         """ "Here we write the bootstrap method, should take in the array of local energies calculated from the
         sample member function of quantum states.
 
@@ -342,12 +352,38 @@ class QS:
         Return:(X_boot_mean) retunrns the mean of the bootstrapped input array
         """
 
-        self.X = X
+        self.X = np.array(X)
         nstraps = len(X)
 
-        X_strap = np.random.choice(X, size=nstraps)
+        #breakpoint()
 
-        return np.mean(X_strap)
+        X_strap = self.backend.random.choice(X, size=nstraps)
+
+        return self.backend.mean(X_strap) , self.backend.var(X_strap)
+    
+
+    def bootstrap_jax(self, X):
+        """
+        Bootstrap method adapted for JAX, taking in an array of local energies and a JAX PRNG key.
+        
+        Input:
+            X: 1D array of elements.
+            key: JAX PRNG key for generating random numbers.
+        
+        Return:
+            Tuple of mean and variance of the bootstrapped input array.
+        """
+        nstraps = len(X)
+
+        seed = 1234  # Example seed value
+        key = random.PRNGKey(seed)
+        
+        # JAX requires explicit random keys for operations; `random.choice` is not available, so we use `random.randint`
+        # to generate indices, and then index `X` with those. This is a common workaround.
+        bootstrap_indices = random.randint(key, shape=(nstraps,), minval=0, maxval=nstraps)
+        X_strap = X[bootstrap_indices]
+        
+        return jnp.mean(X_strap), jnp.var(X_strap)
 
     def superBoot(self, X, n):
         """
@@ -359,13 +395,56 @@ class QS:
         Return: mean of all bootstrap means
         """
         self._n = n
-        self._X = X
+        self._X =self.backend.array( X)
         meanE = []
+        varE = []
 
         for _ in range(n):
-            meanE.append(self.bootstrap(self._X))
+            energy , var = self.bootstrap(self._X)
+            meanE.append(energy)
+            varE.append(var)
 
-        return np.mean(meanE)
+
+        meanE_array = self.backend.array(meanE)
+        varE_array = self.backend.array(varE)
+
+
+        return self.backend.mean(meanE_array) , self.backend.mean(varE_array)
+    
+
+    def blocking_method(self, data, block_size):
+        """
+        Estimates the error of a quantity using the blocking method for a single block size.
+
+        Parameters:
+        - data: A 1D array of time series data from which to estimate the error.
+        - block_size: The size of the blocks to be used.
+
+        Returns:
+        - variance: The variance of the block means for the given block size.
+        """
+        
+        n = len(data)
+        
+        # Ensure block_size is a valid number
+        if block_size <= 0 or block_size > n:
+            raise ValueError("Invalid block_size. It must be > 0 and <= length of data.")
+        
+        # Number of blocks for the specified block size
+        num_blocks = n // block_size
+        
+        # It's important to ensure that the number of data points is a multiple of block_size
+        # If it's not, the remaining data points that don't fit into a full block are discarded
+        if n % block_size != 0:
+            print(f"Warning: {n % block_size} data point(s) at the end are discarded for blocking.")
+        
+        # Reshape data into blocks and calculate block means
+        block_means = self.backend.mean(data[:num_blocks*block_size].reshape(num_blocks, block_size), axis=1)
+        
+        # Calculate variance of the block means
+        variance = self.backend.var(block_means, ddof=1)  # ddof=1 for an unbiased estimator
+
+        return variance
 
     def _is_initialized(self):
         if not self._is_initialized_:

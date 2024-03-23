@@ -109,7 +109,7 @@ class Sampler:
             E_loc = self.hami.local_energy(self.alg.wf, self.alg.state.positions)
             local_energies.append(E_loc)                    # Store local energy
             sampled_positions.append(self.alg.state.positions)
-            
+
         if self._logger is not None:
             # t_range.clear()
             pass

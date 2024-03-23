@@ -112,14 +112,14 @@ class EllipticOscillator(HarmonicOscillator):
         if self._int_type == "Coulomb":
             r_copy = r.copy()
             r_dist = self.la.norm(r_copy[None, ...] - r_copy[:, None, :], axis=-1)
-            r_dist = self.backend.where(r_dist < config.radius, 0, r_dist)                 # Should be edited to be self.radius or something, not 0.0043
+            r_dist = self.backend.where(r_dist < config.radius, 0, r_dist)     #SHOULD THIS ACTUALLY BE 0 ? OR -INF?
             int_energy = self.backend.sum(
                 self.backend.triu(1 / r_dist, k=1)
             )   # Calculates the upper triangular of the distance matrix (to not do a double sum)
         else:
             pass
 
-
+            
         return pe + int_energy
     
     def local_energy(self, wf, r):
