@@ -45,10 +45,10 @@ class QS:
         seed=None,
         alpha=None,
         beta=None,
-        radius = None,
+        radius=None,
         time_step=None,
         diffusion_coeff=None,
-        type_hamiltonian = "ho"
+        type_hamiltonian="ho",
     ):
         """Quantum State
         It is conceptually important to understand that this is the system.
@@ -81,8 +81,6 @@ class QS:
         self.diffusion_coeff = diffusion_coeff
         self.type_hamiltonian = type_hamiltonian
 
-
-
         if rng is None:
             # If no RNG is provided but a seed is, initialize a new RNG with the seed.
             self.rng = default_rng
@@ -98,10 +96,7 @@ class QS:
             case "jax":
                 self.backend = jnp
                 self.la = jnp.linalg
-                # You might also be able to jit some functions herebo
-
                 self.bootstrap = self.bootstrap_jax
-                #JIT?
 
             case _:  # noqa
                 raise ValueError("Invalid backend:", backend)
@@ -134,22 +129,22 @@ class QS:
             backend=self._backend,
             alpha=self._init_alpha,
             beta=self.beta,
-            radius = self.radius
+            radius=self.radius,
         )
         # Initialize the parameters for the VMC class wavefunction, and set the alpha parameter from config.py
         self.alg._initialize_vars(
-            self._N, self._dim, self._log, self.logger, self.logger_level)
-        
-        self.alpha = self.alg.params.get("alpha")           # This should not be necessary, alpha gets picked out in the .wf
-                                                            # Meaning we could save it inside the .wf function as self.alpha, and call it as self.alg.alpha. 
-                                                            # Would it save us some time? No clue, atleast it reduces the need to call the config file.
+            self._N, self._dim, self._log, self.logger, self.logger_level
+        )
+
+        self.alpha = self.alg.params.get(
+            "alpha"
+        )
 
         if self._wf_type == "vmc":
-            self.wf = self.alg.wf 
+            self.wf = self.alg.wf
         else:
             raise ValueError("Invalid wave function type, should be 'vmc'")
         self._is_initialized_ = True
-
 
     def set_hamiltonian(self, type_, int_type, **kwargs):
         """
@@ -246,7 +241,7 @@ class QS:
         else:
             raise ValueError("Invalid optimizer type, should be 'gd'")
 
-    # This should be jittable, but this will be looked at when we start working on training.
+    
     def train(self, max_iter, batch_size, seed, tol=1e-6, **kwargs):
         """
         Train the wave function parameters.
@@ -255,11 +250,11 @@ class QS:
         self._is_initialized()
         self._training_cycles = max_iter
         self._training_batch = batch_size
-        self.sampler._log = False   # Hides the sampling progressbar that will 
-                                    # pop-up in each training iteration
+        self.sampler._log = False  # Hides the sampling progressbar that will
+                                # pop-up in each training iteration
         alphas = []
         cycles = []
-        self._log=False
+        self._log = False
         if self._log:
             t_range = tqdm(
                 range(max_iter),
@@ -271,51 +266,61 @@ class QS:
         else:
             t_range = range(max_iter)
 
-        with tqdm(total=max_iter,
-                desc=rf"[Training progress, alpha={float(self.alpha):.4f}]",
-                position=0,
-                leave=True, 
-                colour="green") as pbar:
+        with tqdm(
+            total=max_iter,
+            desc=rf"[Training progress, alpha={float(self.alpha):.4f}]",
+            position=0,
+            leave=True,
+            colour="green",
+        ) as pbar:
             for iteration in range(max_iter):
 
                 # Sample data in batches
                 _, sampled_positions, local_energies = self.sample(
                     nsamples=batch_size, nchains=1, seed=seed
-            )
-                
-                # sampled positions if of shape (batch_size, nparticles, dim)
-                grads = (self.alg.grads(sampled_positions))
-                first_term = self.backend.mean(grads.reshape(self._training_batch, 1) * local_energies.reshape(self._training_batch, 1))
-                second_term = self.backend.mean(grads) * self.backend.mean(local_energies)
+                )
+
+                # sampled positions is of shape (batch_size, nparticles, dim)
+                grads = self.alg.grads(sampled_positions)
+                first_term = self.backend.mean(
+                    grads.reshape(self._training_batch, 1)
+                    * local_energies.reshape(self._training_batch, 1)
+                )
+                second_term = self.backend.mean(grads) * self.backend.mean(
+                    local_energies
+                )
                 grads_alpha = 2 * (first_term - second_term)
-                
+
                 alphas.append(self.alpha)
                 cycles.append(iteration)
                 # Ensure alpha and its gradient are iterables
                 self.alpha = self.backend.array(
                     self._optimizer.step([self.alpha], [grads_alpha])
                 )[0]
-                
+
                 # Update the progressbar to show the current alpha value
-                pbar.set_description(rf"[Training progress, alpha={float(self.alpha):.4f}]")
+                pbar.set_description(
+                    rf"[Training progress, alpha={float(self.alpha):.4f}]"
+                )
                 pbar.update(1)
                 # Update the alpha in the Parameter instance
                 old_alpha = self.alg.params.get("alpha")
                 diff_alpha = np.abs(old_alpha - self.alpha)
                 if diff_alpha < tol:
-                    pass
-                    # print(f"Converged after {iteration} iterations")
-                    # break
+                    print(f"Converged after {iteration} iterations")
+                    break
                 self.alg.params.set("alpha", self.alpha)
-                
-        self.sampler._log = True        # Show the sampling progress after the training has finished
+
+        self.sampler._log = (
+            True  # Show the sampling progress after the training has finished
+        )
         self._is_trained_ = True
         print("Alpha after training", self.alg.params.get("alpha"))
 
         if self.logger is not None:
             self.logger.info("Training done")
 
-        return alphas , cycles
+        return alphas, cycles
 
     def sample(self, nsamples, nchains=1, seed=None):
         """helper for the sample method from the Sampler class"""
@@ -343,7 +348,7 @@ class QS:
 
         return self._results, sampled_positions, local_energies
 
-    def bootstrap(self, X ):
+    def bootstrap(self, X):
         """ "Here we write the bootstrap method, should take in the array of local energies calculated from the
         sample member function of quantum states.
 
@@ -354,22 +359,18 @@ class QS:
 
         self.X = np.array(X)
         nstraps = len(X)
-
-        #breakpoint()
-
         X_strap = self.backend.random.choice(X, size=nstraps)
 
-        return self.backend.mean(X_strap) , self.backend.var(X_strap)
-    
+        return self.backend.mean(X_strap), self.backend.var(X_strap)
 
     def bootstrap_jax(self, X):
         """
         Bootstrap method adapted for JAX, taking in an array of local energies and a JAX PRNG key.
-        
+
         Input:
             X: 1D array of elements.
             key: JAX PRNG key for generating random numbers.
-        
+
         Return:
             Tuple of mean and variance of the bootstrapped input array.
         """
@@ -377,12 +378,14 @@ class QS:
 
         seed = 1234  # Example seed value
         key = random.PRNGKey(seed)
-        
+
         # JAX requires explicit random keys for operations; `random.choice` is not available, so we use `random.randint`
         # to generate indices, and then index `X` with those. This is a common workaround.
-        bootstrap_indices = random.randint(key, shape=(nstraps,), minval=0, maxval=nstraps)
+        bootstrap_indices = random.randint(
+            key, shape=(nstraps,), minval=0, maxval=nstraps
+        )
         X_strap = X[bootstrap_indices]
-        
+
         return jnp.mean(X_strap), jnp.var(X_strap)
 
     def superBoot(self, X, n):
@@ -395,22 +398,19 @@ class QS:
         Return: mean of all bootstrap means
         """
         self._n = n
-        self._X =self.backend.array( X)
+        self._X = self.backend.array(X)
         meanE = []
         varE = []
 
         for _ in range(n):
-            energy , var = self.bootstrap(self._X)
+            energy, var = self.bootstrap(self._X)
             meanE.append(energy)
             varE.append(var)
-
 
         meanE_array = self.backend.array(meanE)
         varE_array = self.backend.array(varE)
 
-
-        return self.backend.mean(meanE_array) , self.backend.mean(varE_array)
-    
+        return self.backend.mean(meanE_array), self.backend.mean(varE_array)
 
     def blocking_method(self, data, block_size):
         """
@@ -423,26 +423,34 @@ class QS:
         Returns:
         - variance: The variance of the block means for the given block size.
         """
-        
+
         n = len(data)
-        
+
         # Ensure block_size is a valid number
         if block_size <= 0 or block_size > n:
-            raise ValueError("Invalid block_size. It must be > 0 and <= length of data.")
-        
+            raise ValueError(
+                "Invalid block_size. It must be > 0 and <= length of data."
+            )
+
         # Number of blocks for the specified block size
         num_blocks = n // block_size
-        
+
         # It's important to ensure that the number of data points is a multiple of block_size
         # If it's not, the remaining data points that don't fit into a full block are discarded
         if n % block_size != 0:
-            print(f"Warning: {n % block_size} data point(s) at the end are discarded for blocking.")
-        
+            print(
+                f"Warning: {n % block_size} data point(s) at the end are discarded for blocking."
+            )
+
         # Reshape data into blocks and calculate block means
-        block_means = self.backend.mean(data[:num_blocks*block_size].reshape(num_blocks, block_size), axis=1)
-        
+        block_means = self.backend.mean(
+            data[: num_blocks * block_size].reshape(num_blocks, block_size), axis=1
+        )
+
         # Calculate variance of the block means
-        variance = self.backend.var(block_means, ddof=1)  # ddof=1 for an unbiased estimator
+        variance = self.backend.var(
+            block_means, ddof=1
+        )  # ddof=1 for an unbiased estimator
 
         return variance
 

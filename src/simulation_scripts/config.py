@@ -19,7 +19,7 @@ detailed = True
 wf_type = "vmc" 
 seed = 142
 alpha = 0.2
-beta = 1 #2.82843
+beta = 2.82843
 
 
 #only important for Metropolis hastings:

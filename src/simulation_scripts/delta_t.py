@@ -4,7 +4,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 
-sys.path.append("/mnt/c/Users/annar/OneDrive/Desktop/FYS4411/Repo/src")
+# The following will add the path to the ../src directory, for any given laptop running the code
+# Assuming the structure of the folders are the same as Daniel initially built (i.e /src is the parent of /simulation script etc.)
+script_dir = os.path.dirname(os.path.realpath(__file__))
+parent_dir = os.path.dirname(script_dir)
+sys.path.append(parent_dir)
 
 from qs import quantum_state
 import config

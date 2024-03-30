@@ -1,12 +1,13 @@
 from joblib import delayed
-from joblib import Parallel # instead of from pathos.pools import ProcessPool
+from joblib import Parallel  # instead of from pathos.pools import ProcessPool
+
 
 # In here I've rewritten the function to accept the parameters that we use in the sampler.
 # def multiproc(proc_sample, wf, nchains, nsamples, state, scale, seeds):
-def multiproc(proc_sample,nsamples,nchains, seeds):    
+def multiproc(proc_sample, nsamples, nchains, seeds):
     """Enable multiprocessing for jax."""
-    #params = wf.params
-    #placeholder for params
+    # params = wf.params
+    # placeholder for params
     # params = 0 # usually a dictionary
 
     # Handle iterable
@@ -23,13 +24,13 @@ def multiproc(proc_sample,nsamples,nchains, seeds):
     #     return proc_sample(
     #         wf[i], nsamples[i], state[i], scale[i], seeds[i], chain_ids[i]
     #     )
-    
-    def compute(i):
-        return proc_sample(
-            nsamples[i], chain_ids[i], seeds[i]
-        )
 
-    results = Parallel(n_jobs=-1, backend="loky")(delayed(compute)(i) for i in range(nchains))
+    def compute(i):
+        return proc_sample(nsamples[i], chain_ids[i], seeds[i])
+
+    results = Parallel(n_jobs=-1, backend="loky")(
+        delayed(compute)(i) for i in range(nchains)
+    )
     # Assuming that proc_sample returns a tuple (result, energy), you can unpack them
     results, sampled_positions, energies = zip(*results)
 

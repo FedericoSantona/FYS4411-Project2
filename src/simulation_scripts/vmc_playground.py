@@ -11,8 +11,6 @@ parent_dir = os.path.dirname(script_dir)
 sys.path.append(parent_dir)
 
 
-#sys.path.append("/mnt/c/Users/annar/OneDrive/Desktop/FYS4411/Repo/src")
-
 import jax
 
 
@@ -90,14 +88,3 @@ print("Result Energy: ", results.energy)
 print(f"Acceptance rate: {results.accept_rate}")
 
 print(f"Execution time: {execution_time} seconds")
-
-
-#plot alphas vs iteractions
-
-plt.plot(cycles, alphas)
-plt.xlabel("Iterations")
-plt.ylabel("Alpha")
-plt.title("Alpha vs Iterations")
-plt.legend("Alpha")
-plt.savefig("alpha_vs_iterations.png")
-

@@ -52,7 +52,7 @@ def check_and_set_nchains(nchains, logger=None):
 def generate_seed_sequence(user_seed=None, pool_size=None):
     """Process a user-provided seed and convert it into initial states for
     parallel pool workers.
-    
+
     Parameters
     ----------
     user_seed : :obj:`int`

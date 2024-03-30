@@ -37,11 +37,11 @@ class State:
             case "numpy":
                 self.backend = np
                 self.la = np.linalg
-            case  "jax":
+            case "jax":
                 self.backend = jnp
                 self.la = jnp.linalg
                 # You might also be able to jit some functions here
-            case _: # noqa
+            case _:  # noqa
                 raise ValueError("Invalid backend:", backend)
 
     def create_batch_of_states(self, batch_size):
@@ -49,7 +49,6 @@ class State:
         # TODO: check if batch states are immutable because of the jnp
         """
 
-        #print( "BACK END INSIDE " , self.backend)
         # Replicate each property of the state
         batch_positions = self.backend.array([self.positions] * batch_size)
         batch_logp = self.backend.array([self.logp] * batch_size)

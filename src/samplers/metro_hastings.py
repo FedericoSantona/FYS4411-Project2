@@ -54,8 +54,7 @@ class MetropolisHastings(Sampler):
     def jit_functions(self):
         """Put the JAX jit wrapper on jittable functions inside the sampler"""
         self.importance_sampling_interior = jit(self.importance_sampling_interior)
-    
-    
+
     def step(self, wf_squared, state, seed):
         """One step of the importance sampling Metropolis-Hastings algorithm."""
         initial_positions = state.positions
@@ -64,7 +63,7 @@ class MetropolisHastings(Sampler):
         # Generate a proposal move
         next_gen = advance_PRNG_state(seed, state.delta)
         rng = self._rng(next_gen)
-        
+
         # Generate a proposal move
         eta = rng.normal(loc=0, scale=1, size=(self._N, self._dim))
         proposed_positions = (
@@ -75,15 +74,17 @@ class MetropolisHastings(Sampler):
         # Calculate wave function squared for current and proposed positions
         prob_current = wf_squared(initial_positions)
         prob_proposed = wf_squared(proposed_positions)
-        
+
         # Calculate the q - value
-        q_value, proposed_positions = self.importance_sampling_interior(initial_positions,
-                                                                        proposed_positions,
-                                                                        quantum_force_init,
-                                                                        prob_current,
-                                                                        prob_proposed,
-                                                                        self.diffusion_coeff,
-                                                                        self.time_step)
+        q_value, proposed_positions = self.importance_sampling_interior(
+            initial_positions,
+            proposed_positions,
+            quantum_force_init,
+            prob_current,
+            prob_proposed,
+            self.diffusion_coeff,
+            self.time_step,
+        )
         # Decide on acceptance
         accept = rng.random(self._N) < self.backend.exp(q_value)
         accept = accept.reshape(-1, 1)
@@ -101,34 +102,32 @@ class MetropolisHastings(Sampler):
         state.n_accepted = n_accepted
         state.delta += 1
         state.positions = new_positions
-        state.r_dist = new_positions[None, ... ] - new_positions[:, None, :]
+        state.r_dist = new_positions[None, ...] - new_positions[:, None, :]
 
-        #breakpoint()
+    def importance_sampling_interior(
+        self,
+        initial_positions,
+        proposed_positions,
+        q_force_init,
+        prob_init,
+        prob_proposed,
+        D,
+        dt,
+    ):
 
-
-    def importance_sampling_interior(self,
-                                     initial_positions,
-                                     proposed_positions,
-                                     q_force_init,
-                                     prob_init,
-                                     prob_proposed,
-                                     D,
-                                     dt):
-        
         q_force_proposed = 2 * self.alg_inst.grad_wf(proposed_positions)
-        
+
         # Calculate wave function squared for current and proposed positions
-        
         v_init = proposed_positions - initial_positions - D * dt * q_force_init
         v_proposed = initial_positions - proposed_positions - D * dt * q_force_proposed
 
-        Gfunc_init = -self.backend.sum(v_init **2, axis=1) / (D * dt * 4)
-        Gfunc_proposed = -self.backend.sum(v_proposed **2, axis=1) / (D * dt * 4)
+        Gfunc_init = -self.backend.sum(v_init**2, axis=1) / (D * dt * 4)
+        Gfunc_proposed = -self.backend.sum(v_proposed**2, axis=1) / (D * dt * 4)
 
         q_value = Gfunc_proposed - Gfunc_init + prob_proposed - prob_init
 
         return q_value, proposed_positions
-    
+
     def accept_func(
         self,
         n_accepted,
@@ -146,4 +145,3 @@ class MetropolisHastings(Sampler):
         n_accepted += np.sum(accept)
 
         return new_positions, new_logp, n_accepted
-

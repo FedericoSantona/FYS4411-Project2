@@ -1,42 +1,27 @@
-# Template for students undertaking Computational Physics II 
-
-This is a Python template for the v2024 edition of the course FYS4411. The course page can be found [here](https://www.uio.no/studier/emner/matnat/fys/FYS4411/v24/index.html).
+# Project 1 in FYS4411: Computational Physics II
+The course page can be found [here](https://www.uio.no/studier/emner/matnat/fys/FYS4411/v24/index.html).
 
 ### General information
+This repository contains all the code written in Python to build a VMC algorithm, following closely the project tasks presented [here](https://github.com/CompPhysics/ComputationalPhysics2/blob/gh-pages/doc/Projects/2024/Project1/pdf/Project1.pdf). The general structure of our program has been inspired to a great extent by our remarkable TA, Daniel Haas, which provided an excellent skeleton for us to build our program using Python. This beauty can be found [here](https://github.com/Daniel-Haas-B/FYS4411-Template?tab=readme-ov-file).
 
-Originally, the course was structured only in C++ (take a look at https://github.com/mortele/variational-monte-carlo-fys4411).
-One of the main reasons for this, beyond learning modern C++, is the need for fast computations in Markov Chain Monte Carlo methods.
-
-However, with JAX parallelizations and just-in-time compilation, it is possible to achieve comparable results in Python and therefore we are making this template available.
-Whether you are using this template or just Python for the course projects, we **strongly** recommend JAX. Take a close look at the [documentation](https://jax.readthedocs.io/en/latest/index.html)
-
-Parts of this template were inspired by https://github.com/nicolossus/FYS4411-Project2 (thank you!)
-
-Using this template, you are supposed to fill some gaps in the code. Another possibility is even to start from scratch and use this as a more vague template.
-Here you can find suggestions that can seem rigid in the code structure. Feel free to not follow those.
-
-For example, the way we use just-in-time compilation and some function closures is just a suggestion to ensure the purity of some functions, but there might be other ways. 
-Take a look at [this other material](https://jax.readthedocs.io/en/latest/notebooks/Common_Gotchas_in_JAX.html).
-Another example where you might want to change things: maybe you do not want to have to pass the wavefunction object to the Hamiltonian class. Feel free to change those details if you don't like the global structure.
-
+We've made the VMC algorithm to run with regular metropolis sampling, as well as using the Metro-Hastings (importance sampling). Furthermore, we've implemented deepest descent optimization to tune our variational parameters. Most of our code is written in [JAX](https://jax.readthedocs.io/en/latest/index.html) - which offers a high performing compilation of our Python-code - as well as automatic differentiation. We have however, built most of the same code using [NumPy](https://numpy.org) aswell, mostly to benchmark, and for simplicity when creating our programs. 
 
 ### Requirements
-We suggest using [Poetry](https://python-poetry.org/) to manage project dependencies (as is clear from pyproject.toml and all the dependencies are there). Feel free to not use this as [pip supports installing .toml dependencies natively](https://stackoverflow.com/questions/62408719/download-dependencies-declared-in-pyproject-toml-using-pip).
+Necessary dependencies can be found in the pyproject.toml file - and is easily handled by [Poetry](https://python-poetry.org/). Feel free to install them manually using Pip if you dislike simplicity (or have any other reason to not use Poetry).
 
+### Running the VMC algorithm
+Running our VMC implementation is simple, and straightforward. You can choose your system specific parameters inside the config.py file (located in src/simulation_scripts), 
+which offers the following tune-able parameters to change the quantum system:
+- Number of particles.
+- Number of dimensions.
+- Number of samples.
+- Number of chains (for parallelisation). NOTE: Number of samples will then be the same _on each chain_
+- Learning rate (eta) and number of training cycles
+- Batch size in the training
+- MCMC algorithm of choice (with/without importance sampling)
+- Type of Hamiltonian (elliptic or harmonic)
+- Interaction (None or Coulomb)
+- Initial guess for the variational parameter, alpha
 
-### Getting initial results
-If you are in a UNIX-based system, go to `/src/` from the terminal and type `pwd`.
+After setting these parameters to reflect the quantum system one wishes to study, the entire program is ran using '>  python vmc_playground.py' (file is also located in src/simulation_scripts). This will automatically start the VMC algorithm, and also nicely present some values we deem interesting (i.e the ground state energy, variance, std dev etc.)
 
-Add that full src path at the beginning of the `vmc_playground.py` file, in 
-
-```
-sys.path.append("Full/Path/For/Src")
-```
-
-You can get initial results by going to `src/simulation_scripts/` and running 
-```
-python3 vmc_playground.py
-```
-
-
-*Disclaimer:* note those results do not make physical sense as you need to complete the functions and code bits yourself.

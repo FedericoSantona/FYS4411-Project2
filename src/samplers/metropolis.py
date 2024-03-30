@@ -46,8 +46,9 @@ class Metropolis(Sampler):
         # Calculate acceptance probability in log domain
         log_accept_prob = prob_proposed - prob_current
         # Decide on acceptance
-        # accept = rng.random(initial_positions.shape[0]) < self.backend.exp(log_accept_prob)
-        accept = rng.random(initial_positions.shape[0]) < np.exp(log_accept_prob)  # Refrain from using Jax function outside jitcompiled code
+        accept = rng.random(initial_positions.shape[0]) < np.exp(
+            log_accept_prob
+        )
         accept = accept.reshape(-1, 1)
         new_positions, new_logp, n_accepted = self.accept_func(
             n_accepted=state.n_accepted,
@@ -58,16 +59,12 @@ class Metropolis(Sampler):
             log_psi_proposed=prob_proposed,
         )
 
-
-
         # Create new state by updating state variables.
         state.logp = new_logp
         state.n_accepted = n_accepted
         state.delta += 1
         state.positions = new_positions
-        state.r_dist = new_positions[None, ... ] - new_positions[:, None, :]
-
-        #breakpoint()
+        state.r_dist = new_positions[None, ...] - new_positions[:, None, :]
 
     def accept_func(
         self,

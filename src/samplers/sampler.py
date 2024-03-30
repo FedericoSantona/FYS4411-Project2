@@ -1,12 +1,10 @@
-import copy
-
 import jax
 import jax.numpy as jnp
 import numpy as np
 import pandas as pd
 from qs.utils import (
     check_and_set_nchains,
-)  # we suggest you use this function to check and set the number of chains when you parallelize
+)
 from qs.utils import generate_seed_sequence
 from qs.utils import sampler_utils
 from qs.utils import State
@@ -35,13 +33,10 @@ class Sampler:
             case "numpy":
                 self.backend = np
                 self.la = np.linalg
-                # self.accept = accept_numpy
             case "jax":
                 self.backend = jnp
                 self.la = jnp.linalg
-                # self.accept = accept_jax()
-                # You might also be able to jit some functions here
-            case _:  # noqa
+            case _:
                 raise ValueError("Invalid backend:", backend)
 
     def sample(self, nsamples, nchains=1, seed=None):
@@ -51,7 +46,9 @@ class Sampler:
         """
 
         nchains = check_and_set_nchains(nchains, self._logger)
-        seeds = generate_seed_sequence(  seed, nchains )  # YOU have to understand how to use it because you already do it in the MEtro step
+        seeds = generate_seed_sequence(
+            seed, nchains
+        )  # Generate seeds for each chain
         if nchains == 1:
             chain_id = 0
 
@@ -62,27 +59,23 @@ class Sampler:
         else:
             multi_sampler = sampler_utils.multiproc
             results, self._sampled_positions, self._local_energies = multi_sampler(
-                self._sample, 
-                nsamples, 
-                nchains, 
-                seeds
+                self._sample, nsamples, nchains, seeds
             )
             self._results = pd.DataFrame(results)
 
         self._sampling_performed_ = True
         if self._logger is not None and self._log:
             self._logger.info("Sampling done")
-            
 
         return self._results, self._sampled_positions, self._local_energies
 
     def _sample(self, nsamples, chain_id, seed=None):
         """To be called by process. Here the actual sampling is performed.
-        
+
         Args:
         seed : int,
             Seed for the random number generator. The default is self._seed (what was initialized in the system class).
-            We need to able to set the seed for each chain in the sampling process, otherwise we will get the same results for each chain. 
+            We need to able to set the seed for each chain in the sampling process, otherwise we will get the same results for each chain.
         """
         if self._log:
             t_range = tqdm(
@@ -97,31 +90,27 @@ class Sampler:
         # Set the seed for the chain
         if seed is None:
             seed = self._seed
-        
+
         sampled_positions = []
-        local_energies = []     # List to store local energies
-        for _ in t_range:       # Here use range(nsamples) if you train
+        local_energies = []  # List to store local energies
+        for _ in t_range:  # Here use range(nsamples) if you train
             # Perform one step of the MCMC algorithm by updating the state parameters
             # WE DO NOT create a new state instance, as this is not necessary.
-            self.step(
-                self.alg.prob, self.alg.state, seed
-            )
+            self.step(self.alg.prob, self.alg.state, seed)
             E_loc = self.hami.local_energy(self.alg.wf, self.alg.state.positions)
-            local_energies.append(E_loc)                    # Store local energy
+            local_energies.append(E_loc)  # Store local energy
             sampled_positions.append(self.alg.state.positions)
 
         if self._logger is not None:
-            # t_range.clear()
             pass
-            
 
         # Calculate acceptance rate and convert lists to arrays
-        # TODO: Should investigate more here
         if config.training_cycles != 0 and nsamples != 0:
-            acceptance_rate = self.alg.state.n_accepted / (nsamples * self.alg._N * self.n_training_cycles)
+            acceptance_rate = self.alg.state.n_accepted / (
+                nsamples * self.alg._N * self.n_training_cycles
+            )
         else:
             acceptance_rate = self.alg.state.n_accepted / (nsamples * self.alg._N)
-        # acceptance_rate = self.alg.state.n_accepted / (nsamples * self.alg._N)
         local_energies = self.backend.array(local_energies)
         sampled_positions = self.backend.array(sampled_positions)
         mean_positions = self.backend.mean(self.backend.abs(sampled_positions), axis=0)
@@ -144,35 +133,6 @@ class Sampler:
 
         return sample_results, sampled_positions, local_energies
 
-    def accept_jax(
-        self,
-        n_accepted,
-        accept,
-        initial_positions,
-        proposed_positions,
-        log_psi_current,
-        log_psi_proposed,
-    ):
-        """
-        To be implemented by subclasses
-        """
-        raise NotImplementedError("Subclasses must implement this method.")
-
-    def accept_numpy(
-        self,
-        n_accepted,
-        accept,
-        initial_positions,
-        proposed_positions,
-        log_psi_current,
-        log_psi_proposed,
-    ):
-        """
-        To be implemented by subclasses
-        """
-        raise NotImplementedError("Subclasses must implement this method.")
-
     def set_hamiltonian(self, hamiltonian):
-        """Set the Hamiltonian for the sampler
-        """
+        """Set the Hamiltonian for the sampler"""
         self.hamiltonian = hamiltonian
