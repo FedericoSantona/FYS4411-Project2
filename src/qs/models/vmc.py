@@ -124,7 +124,7 @@ class VMC:
 
         OBS: We strongly recommend you work with the wavefunction in log domain.
         """
-        a = self.params.get("a")  # Using Parameter.get to access alpha
+        a = self.params.get("a")  
         b = self.params.get("b")
         W = self.params.get("W")
 
@@ -151,46 +151,28 @@ class VMC:
         """
 
         r: (N, dim) array so that r_i is a dim-dimensional vector
-        alpha: (N, dim) array so that alpha_i is a dim-dimensional vector
+        a: (N, dim) array so that a_i is a dim-dimensional vector
+        b: (N, 1) array represents the number of hidden nodes
+        W: (N_hidden, N , dim) array represents the weights
 
-        return: should return Ψ(alpha, r)
 
         OBS: We strongly recommend you work with the wavefunction in log domain.
 
         """
-        first_sum =  self.backend.sum((r-a)**2, axis = 1) /4
-        lntrm = 1+self.backend.exp(b+self.backend.sum(self.backend.sum(r*W[None,:,:],axis = 2), axis = 1))
-        second_sum = self.backend.sum(lntrm)/2
+        first_sum =  0.25 * self.backend.sum((r-a)**2, axis = 1) 
+
+        #lntrm = 1+self.backend.exp(b+self.backend.sum(self.backend.sum(r*W[None,:,:],axis = 2), axis = 1))
+        #For how we were doing before we were making W a vector of shape (1 , N_hidden, N , dim)
+        #And then we summed everything together and obtain something ugly, I think this is the correct way to do it
+        #This way instead self.backend.sum(self.backend.sum(r[None,:,:]*W,axis = 2) has the shape of (N_hidden,)
+        lntrm = 1+self.backend.exp(b+self.backend.sum(self.backend.sum(r[None,:,:]*W,axis = 2), axis = 1))
+
+        second_sum = 0.5 * self.backend.sum(lntrm )
         wf = -first_sum + second_sum
         
         return wf
 
-    def wf_closure_int(self, r, alpha):
-        """
-
-        r: (N, dim) array so that r_i is a dim-dimensional vector
-        alpha: (1,1) array so that alpha is just a number but in the array form
-
-        return: should return a an array of the wavefunction for each particle ( N, )
-
-        OBS: We strongly recommend you work with the wavefunction in log domain.
-        """
-
-        g = -alpha * (
-            self.beta**2 * (r[:, 0] ** 2) + self.backend.sum(r[:, 1:] ** 2, axis=1)
-        )  # Sum over the coordinates x^2 + y^2 + z^2 for each particle
-        # Calculate pairwise distances.
-        distances = self.la.norm(self.state.r_dist, axis=-1)
-        # Compute f using the masked distances
-        f = jnp.log(
-            jnp.where(distances < self.radius, 0, 1 - self.radius / distances)
-            + jnp.eye(r.shape[0])
-        )
-        f_term = self.backend.sum(f, axis=1)
-        wf = g + f_term
-
-        return wf
-
+    
     def prob_closure(self, r, alpha):
         """
         Return a function that computes |Ψ(alpha, r)|^2
@@ -209,17 +191,44 @@ class VMC:
         """
         alpha = self.params.get("alpha")  # Using Parameter.get to access alpha
         return self.prob_closure(r, alpha)
+    
 
-    def grad_wf_closure(self, r, alpha):
+    def grad_wf(self, r):
+        """
+        Helper for the gradient of the wavefunction with respect to r
+
+        OBS: We strongly recommend you work with the wavefunction in log domain.
+        """
+        a = self.params.get("a")  
+        b = self.params.get("b")
+        W = self.params.get("W")  
+
+        return self.grad_wf_closure(r, a , b, W)
+
+    def grad_wf_closure(self, r, a , b, W):
         """
         Computes the gradient of the wavefunction with respect to r analytically
         Is overwritten by the JAX version if backend is JAX
+
+        r: (N, dim) array so that r_i is a dim-dimensional vector
+        a: (N, dim) array so that a_i is a dim-dimensional vector
+        b: (N, 1) array represents the number of hidden nodes
+        W: (N_hidden, N , dim) array represents the weights
+
+
+        Here the output will be of shape (N, dim) because in the Local Energy formula 
+        we want  to be able to sum every node and then square it, so we need to have the same shape as r
+        in order to conserve all the information
         """
 
-        # The gradient of the Gaussian wavefunction is straightforward:
-        # d/dr -alpha * r^2 = -2 * alpha * r
-        # We apply this to all dimensions (assuming r is of shape (n_particles, n_dimensions))
-        return -2 * alpha * r
+        first_term = 0.5 * (r - a) 
+
+        exp_term =  1+self.backend.exp(-(b+self.backend.sum(self.backend.sum(r[None,:,:]*W,axis = 2), axis = 1)))
+        second_term = 0.5 * self.backend.sum(W / exp_term [:,None,None], axis = 0)
+       
+
+        return -first_term + second_term
+
 
     def grad_wf_closure_jax(self, r, alpha):
         """
@@ -234,15 +243,7 @@ class VMC:
 
         return grad_log_psi(r)
 
-    def grad_wf(self, r):
-        """
-        Helper for the gradient of the wavefunction with respect to r
 
-        OBS: We strongly recommend you work with the wavefunction in log domain.
-        """
-        alpha = self.params.get("alpha")  # Using Parameter.get to access alpha
-
-        return self.grad_wf_closure(r, alpha)
 
     def grads(self, r):
         """
@@ -291,26 +292,27 @@ class VMC:
         OBS: We strongly recommend you work with the wavefunction in log domain.
         """
 
-        alpha = self.params.get("alpha")  # Using Parameter.get to access alpha
-        return self.laplacian_closure(r, alpha)
+        a = self.params.get("a")  
+        b = self.params.get("b")
+        W = self.params.get("W")  
 
-    def laplacian_closure(self, r, alpha):
+        return self.laplacian_closure(r, a , b , W)
+
+    def laplacian_closure(self, r, a , b , W):
         """
         Analytical expression for the laplacian of the wavefunction
         """
-        # For a Gaussian wavefunction in log domain, the Laplacian is simply 2*alpha*d - 4*alpha^2*sum(r_i^2),
-        # where d is the number of dimensions.
         
-        r = r.reshape(-1, self._dim)  # Reshape to (1 , n_dimensions)
-        d = r.shape[1]  # Number of dimensions
-        r2 = self.backend.sum(r**2, axis=1)
+        num = self.backend.exp(b+self.backend.sum(self.backend.sum(r[None,:,:]*W, axis = 2), axis = 1))
+        den = (1+self.backend.exp(b+self.backend.sum(self.backend.sum(r[None,:,:]*W,axis = 2), axis = 1)))**2
 
-        laplacian = (
-            4 * alpha**2 * r2 - 2 * alpha * d
-        )  
-        laplacian = self.backend.sum(
-            laplacian.reshape(-1, 1)
-        )  # Reshape to (n_particles, 1)
+        term = num/den
+
+        laplacian = -0.5 +0.5*self.backend.sum(W**2 * term[:,None,None], axis = 0)
+
+        #use  axis = (0,2) if you want to output of shape (N,) instead of (N,dim)
+        #It doesnt make a difference on its own I only depends on how we will develop the code further
+
 
         return laplacian
 
