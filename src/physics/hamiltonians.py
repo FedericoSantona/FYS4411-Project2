@@ -68,73 +68,38 @@ class HarmonicOscillator(Hamiltonian):
     # easily compiled in JAX. The JNP.arrays should be used _only_ where we can actually run the
     # JAX JIT compiler. I think it'll potentially reduce the performance of the program otherwise.
     
-    def kinetic_energy(self, r):
-        """Kinetic energy of the system"""
-        # I believe there should be a way to easily parallelize this for loop (i.e split it into smaller for-loops that run in parallel)
-        
-        laplacian = 0
-        for i in range(self._N):
-            laplacian += self.alg_int.laplacian(r[i])
-            # if jnp.abs(self.alg_int.laplacian(r[i])) > 20:
-            #     print(f"term1: {self.alg_int.first_term}, term2: {self.alg_int.second_term}"
-            #           + "\n" + f"term3: {self.alg_int.third_term}, term4: {self.alg_int.fourth_term}")
-                # breakpoint()
+    def CoulombInteraction(self, r):
+        r_copy = r.copy()
+        r_dist = self.la.norm(r_copy[None, ...] - r_copy[:, None, :], axis=-1)
+        r_dist = self.backend.where(r_dist < config.radius, 0, r_dist)     
+        int_energy = self.backend.sum(
+            self.backend.triu(1 / r_dist, k=1)
+        )   # Calculates the upper triangular of the distance matrix (to not do a double sum)
 
-        return -0.5 * laplacian
-    
-    def local_energy(self, wf, r):
-        """Local energy of the system
-        Calculates the local energy of a system with positions `r` and wavefunction `wf`.
-        `wf` is assumed to be the log of the wave function.
-        """
-        # Potential Energy
-        pe = 0.5 * self.backend.sum(self.backend.sum(r**2, axis=1))  # Use self.backend to support numpy/jax.numpy 
-        # Kinetic energy
-        ke = self.kinetic_energy(r)
-        # Correct calculation of local energy
-        local_energy = ke + pe
-
-        return local_energy
+        return int_energy
     
 
-class EllipticOscillator(HarmonicOscillator):
-    def __init__(self, alg_int, nparticles, dim, log, logger, seed, logger_level, int_type, backend, beta):
-        super().__init__(alg_int, nparticles, dim, log, logger, seed, logger_level, int_type, backend)
+    def non_int_energy(self, r):
 
-        self.beta = beta  # Store the ellipticity parameter
+        first_term = self.alg_int.grad_wf(r)**2
+        second_term = self.alg_int.laplacian(r)
+        third_term = r**2
 
-    def potential_energy(self, r):
-        """Calculates the potential energy
-        """
-        pe = 0.5 * self.backend.sum(self.beta**2 * r[:, 0]**2 + self.backend.sum(r[:, 1:]**2, axis=1))
-        int_energy = 0
+        #The sum without specific axis is the sum of all elements in the array i.e. returns a scalar
+        non_int_energy = -0.5 *self.backend.sum(-first_term - second_term + third_term) 
+
+        return non_int_energy
+
+
+    def local_energy(self,r):
+
+        non_int_energy = self.non_int_energy(r)
+        interaction_energy = 0
 
         if self._int_type == "Coulomb":
-            r_copy = r.copy()
-            r_dist = self.la.norm(r_copy[None, ...] - r_copy[:, None, :], axis=-1)
-            r_dist = self.backend.where(r_dist < config.radius, 0, r_dist)     
-            int_energy = self.backend.sum(
-                self.backend.triu(1 / r_dist, k=1)
-            )   # Calculates the upper triangular of the distance matrix (to not do a double sum)
+            interaction_energy = self.CoulombInteraction(r)
         else:
             pass
 
-            
-        return pe + int_energy
-    
-    def local_energy(self, wf, r):
-        ###TODO Impliment local energy for EO
+        return non_int_energy + interaction_energy
 
-        """Local energy of the system
-        Calculates the local energy of a system with positions `r` and wavefunction `wf`.
-        `wf` is assumed to be the log of the wave function.
-        """
-        # Adjust the potential energy calculation for the elliptic oscillator
-        # Assuming r is structured as [nparticles, dim], and the first column is x, second is y, and the third is z.
-        pe = self.potential_energy(r)
-        ke = self.kinetic_energy(r)
-        
-        # Correct calculation of local energy
-        local_energy =  ke + pe
-
-        return local_energy

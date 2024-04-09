@@ -26,7 +26,6 @@ from numpy.random import default_rng
 from tqdm.auto import tqdm
 
 from physics.hamiltonians import HarmonicOscillator as HO
-from physics.hamiltonians import EllipticOscillator as EO
 from samplers.metropolis import Metropolis as Metro
 from samplers.metro_hastings import MetropolisHastings as MetroHastings
 
@@ -40,11 +39,10 @@ class QS:
         self,
         backend="numpy",
         log=True,
+        h_number=0,
         logger_level="INFO",
         rng=None,
         seed=None,
-        alpha=None,
-        beta=None,
         radius=None,
         time_step=None,
         diffusion_coeff=None,
@@ -61,6 +59,8 @@ class QS:
 
         self._log = log
         self.hamiltonian = None
+        self._h_number = h_number
+
         self.mcmc_alg = None
         self._optimizer = None
         self.wf = None
@@ -75,8 +75,6 @@ class QS:
             else None
         )
         self._backend = backend
-        self._init_alpha = alpha
-        self.beta = beta
         self.time_step = time_step
         self.diffusion_coeff = diffusion_coeff
         self.type_hamiltonian = type_hamiltonian
@@ -117,27 +115,24 @@ class QS:
         self._N = nparticles
         self._dim = dim
         self._wf_type = wf_type
+
+    
         # Initialize the VMC class object
         self.alg = VMC(
             self._N,
             self._dim,
+            self._h_number,
             rng=self.rng,
             log=self._log,
             logger=self.logger,
             seed=self._seed,
             logger_level=self.logger_level,
             backend=self._backend,
-            alpha=self._init_alpha,
-            beta=self.beta,
             radius=self.radius,
         )
         # Initialize the parameters for the VMC class wavefunction, and set the alpha parameter from config.py
         self.alg._initialize_vars(
             self._N, self._dim, self._log, self.logger, self.logger_level
-        )
-
-        self.alpha = self.alg.params.get(
-            "alpha"
         )
 
         if self._wf_type == "vmc":
@@ -168,21 +163,9 @@ class QS:
                 self.int_type,
                 self._backend,
             )
-        elif type_ == "eo":
-            self.hamiltonian = EO(
-                vmc_instance,
-                self._N,
-                self._dim,
-                self._log,
-                self.logger,
-                self._seed,
-                self.logger_level,
-                self.int_type,
-                self._backend,
-                self.beta,
-            )
+        
         else:
-            raise ValueError("Invalid Hamiltonian type, should be 'ho' or 'eo'")
+            raise ValueError("Invalid Hamiltonian type, should be 'ho' ")
         # check HO script
 
     def set_sampler(self, mcmc_alg, scale=0.5):
@@ -246,7 +229,8 @@ class QS:
         """
         Train the wave function parameters.
         Here you should calculate sampler statistics and update the wave function parameters based on the derivative of the (statistical) local energy.
-        """
+        
+
         self._is_initialized()
         self._training_cycles = max_iter
         self._training_batch = batch_size
@@ -319,6 +303,12 @@ class QS:
 
         if self.logger is not None:
             self.logger.info("Training done")
+
+            """
+        alphas = 1
+        cycles = 1
+        self._training_cycles = 0
+        self._training_batch = 0
 
         return alphas, cycles
 

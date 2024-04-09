@@ -97,7 +97,7 @@ class Sampler:
             # Perform one step of the MCMC algorithm by updating the state parameters
             # WE DO NOT create a new state instance, as this is not necessary.
             self.step(self.alg.prob, self.alg.state, seed)
-            E_loc = self.hami.local_energy(self.alg.wf, self.alg.state.positions)
+            E_loc = self.hami.local_energy( self.alg.state.positions)
             local_energies.append(E_loc)  # Store local energy
             sampled_positions.append(self.alg.state.positions)
 

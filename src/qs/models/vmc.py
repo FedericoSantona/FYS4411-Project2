@@ -32,9 +32,11 @@ class VMC:
         self._logger = logger
         self._N = nparticles
         self._dim = dim
-        self._n_hidden= h_number,
-        self.radius = config.radius,
-        self._Nvis = self._dim*self._N,
+        self._n_hidden = h_number
+
+        self.radius = config.radius
+        self._Nvis = self._dim*self._N
+        
         
         self.rng = random.PRNGKey(self._seed)  # Initialize RNG with the provided seed
 
@@ -46,9 +48,8 @@ class VMC:
         self._initialize_vars(nparticles, dim, log, logger, logger_level)
 
         if self.log:
-            msg = f"""VMC initialized with {self._N} particles in {self._dim} dimensions with {
-                    self.params.get("alpha").size
-                    } parameters"""
+            n_para = self._Nvis + self._n_hidden + self._n_hidden*self._Nvis
+            msg = f"""VMC initialized with {self._N} particles in {self._dim} dimensions with {n_para} parameters"""
             self._logger.info(msg)
 
     def generate_normal_matrix(self, n, m):
@@ -86,17 +87,6 @@ class VMC:
         else:
             raise ValueError(f"Backend {self.backend} not supported")
 
-        if config.interaction == "Coulomb" or config.hamiltonian == "eo":
-            print("Coulomb interaction")
-            self.wf_closure = self.wf_closure_int
-
-        if config.interaction == "Coulomb" and config.hamiltonian == "eo":
-            self.laplacian_closure = self.anal_laplacian_closure_int
-
-            if backend != "jax":
-                raise ValueError(
-                    f"Backend {self.backend} not supported for Coulomb interaction"
-                )
 
     def _jit_functions(self):
         """
@@ -169,19 +159,9 @@ class VMC:
 
         second_sum = 0.5 * self.backend.sum(lntrm )
         wf = -first_sum + second_sum
+
         
         return wf
-
-    
-    def prob_closure(self, r, alpha):
-        """
-        Return a function that computes |Ψ(alpha, r)|^2
-
-        OBS: We strongly recommend you work with the wavefunction in log domain.
-        """
-
-        log_psi = self.wf_closure(r, alpha)
-        return 2 * log_psi  # Since we're working in the log domain
 
     def prob(self, r):
         """
@@ -189,8 +169,23 @@ class VMC:
 
         OBS: We strongly recommend you work with the wavefunction in log domain.
         """
-        alpha = self.params.get("alpha")  # Using Parameter.get to access alpha
-        return self.prob_closure(r, alpha)
+
+        a = self.params.get("a")  
+        b = self.params.get("b")
+        W = self.params.get("W")
+          
+        return self.prob_closure(r, a , b, W)
+    
+    def prob_closure(self, r, a , b, W):
+        """
+        Return a function that computes |Ψ(alpha, r)|^2
+
+        OBS: We strongly recommend you work with the wavefunction in log domain.
+        """
+
+        log_psi = self.wf_closure(r, a , b , W)
+
+        return 2 * log_psi  # Since we're working in the log domain
     
 
     def grad_wf(self, r):
@@ -316,47 +311,7 @@ class VMC:
 
         return laplacian
 
-    def uprime(self, rij):
-        return self.radius / (rij**2 - self.radius * rij)
-
-    def u_double_prime(self, rij):
-        return (
-            self.radius * (self.radius - 2 * rij) / ((rij**2 - self.radius * rij) ** 2)
-        )
-
-    def anal_laplacian_closure_int(self, r, alpha):
-        """Something something soon easter boys - this should take osme arguments and return some value?"""
-
-        k_indx = np.where(self.state.positions == r)[0][0]
-        k_distances = self.la.norm(self.state.r_dist + 1e-8, axis=-1)[k_indx]
-        self.k_distances = jnp.delete(k_distances, k_indx, axis=0)
-        r_dist = self.state.positions - r + 1e-8
-        r_dist = jnp.delete(r_dist, k_indx, axis=0)
-        x, y, z = r
-        self.grad_phi = -2 * alpha * jnp.array([x, y, self.beta * z])
-        self.grad_phi_square = 4 * alpha**2 * (
-            x**2 + y**2 + self.beta**2 * z**2
-        ) - 2 * alpha * (self.beta + 2)
-
-        self.first_term = self.grad_phi_square
-
-        self.second_term_sum = jnp.sum(
-            (r_dist.T / self.k_distances * self.uprime(self.k_distances)).T, axis=0
-        )  # sum downwards, to keep it as a vector
-
-        self.second_term = 2 * jnp.dot(self.grad_phi, self.second_term_sum)
-        self.third_term = jnp.dot(self.second_term_sum, self.second_term_sum)
-        self.fourth_term = jnp.sum(
-            self.u_double_prime(self.k_distances)
-            + 2 / self.k_distances * self.uprime(self.k_distances)
-        )
-
-        self.anal_laplacian = (
-            self.first_term + self.second_term + self.third_term + self.fourth_term
-        )
-
-        return self.anal_laplacian
-
+    
     def laplacian_closure_jax(self, r, alpha):
         """
         Computes the Laplacian of the wavefunction for each particle using JAX automatic differentiation.
@@ -402,7 +357,7 @@ class VMC:
             subkey, (nparticles, dim)
         )  # Using JAX for random numbers
         # Initialize logp, assuming a starting value or computation
-        a = self.params.get("alpha")  # Using Parameter.get to access alpha
+        
         initial_logp = 0  # self.prob_closure(initial_positions , a)  # Now I use the log of the modulus of wave function, can be changed
 
         self.state = State(
@@ -415,8 +370,9 @@ class VMC:
         # Take a look at the qs.utils.Parameter class. You may or may not use it depending on how you implement your code.
         
         # Initialize the Boltzmann machine parameters
-        a =  np.random.normal(0,1,size = (self._N,self._dim) )
+        a =  np.random.normal(0,1,size = (self._N, self._dim) )
         b =  np.random.normal(0,1,size = self._n_hidden )
+
         W =  np.random.normal(0,1,size = (self._n_hidden, self._N, self._dim) )
 
         initial_params = {"a": self.backend.array(a),"b": self.backend.array(b),"W": self.backend.array(W)}
