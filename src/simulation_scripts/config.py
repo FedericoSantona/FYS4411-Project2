@@ -3,6 +3,7 @@ output_filename = "../data/vmc_playground.csv"
 
 nparticles = 4
 dim = 3
+n_hidden = 10 
 nsamples =  int(2**12) #  2**18 = 262144
 scale = 1 + (dim-1)*0.1
 nchains = 1#4# number of Markov chains. When you parallelize, you can set this to the number of cores. Note you will have to implement this yourself.
@@ -18,8 +19,7 @@ batch_size = 0 # 200
 detailed = True
 wf_type = "vmc" 
 seed = 142
-alpha = 0.2
-beta = 2.82843
+
 
 
 #only important for Metropolis hastings:

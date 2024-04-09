@@ -16,14 +16,13 @@ class VMC:
         self,
         nparticles,
         dim,
+        h_number,
         rng=None,
         log=False,
         logger=None,
         seed=None,
         logger_level="INFO",
         backend="numpy",
-        alpha=None,
-        beta=None,
         radius=None,
     ):
         self._configure_backend(backend)
@@ -33,17 +32,15 @@ class VMC:
         self._logger = logger
         self._N = nparticles
         self._dim = dim
-        self.radius = config.radius
-        self.beta = beta
+        self._n_hidden= h_number,
+        self.radius = config.radius,
+        self._Nvis = self._dim*self._N,
+        
         self.rng = random.PRNGKey(self._seed)  # Initialize RNG with the provided seed
 
-        if alpha:
-            self._initialize_variational_params(alpha)
-        else:
-            self._initialize_variational_params()  # initialize the variational parameters (ALPHA)
-
-        if beta:
-            self.beta = beta
+    
+        self._initialize_variational_params()
+        
 
         self.state = 0  # take a look at the qs.utils State class
         self._initialize_vars(nparticles, dim, log, logger, logger_level)
@@ -127,9 +124,11 @@ class VMC:
 
         OBS: We strongly recommend you work with the wavefunction in log domain.
         """
-        alpha = self.params.get("alpha")  # Using Parameter.get to access alpha
+        a = self.params.get("a")  # Using Parameter.get to access alpha
+        b = self.params.get("b")
+        W = self.params.get("W")
 
-        return self.wf_closure(r, alpha)
+        return self.wf_closure(r, a, b, W)
 
     def wf_closure_train(self, r, alpha):
         """
@@ -148,7 +147,7 @@ class VMC:
 
         return wf
 
-    def wf_closure(self, r, alpha):
+    def wf_closure(self, r, a, b, W):
         """
 
         r: (N, dim) array so that r_i is a dim-dimensional vector
@@ -159,10 +158,11 @@ class VMC:
         OBS: We strongly recommend you work with the wavefunction in log domain.
 
         """
-        wf = -alpha * (
-            self.beta**2 * (r[:, 0] ** 2) + self.backend.sum(r[:, 1:] ** 2, axis=1)
-        )
-
+        first_sum =  self.backend.sum((r-a)**2, axis = 1) /4
+        lntrm = 1+self.backend.exp(b+self.backend.sum(self.backend.sum(r*W[None,:,:],axis = 2), axis = 1))
+        second_sum = self.backend.sum(lntrm)/2
+        wf = -first_sum + second_sum
+        
         return wf
 
     def wf_closure_int(self, r, alpha):
@@ -408,16 +408,17 @@ class VMC:
         )
         self.state.r_dist = initial_positions[None, ...] - initial_positions[:, None, :]
 
-    def _initialize_variational_params(self, alpha=None):
+    def _initialize_variational_params(self):
         # Initialize variational parameters in the correct range with the correct shape
         # Take a look at the qs.utils.Parameter class. You may or may not use it depending on how you implement your code.
-        # Here, we initialize the variational parameter 'alpha'.
-        if alpha:
-            initial_params = {"alpha": jnp.array([alpha])}
-        else:
-            initial_params = {
-                "alpha": jnp.array([0.5])
-            }  # Example initial value for alpha ( 1 paramter)
+        
+        # Initialize the Boltzmann machine parameters
+        a =  np.random.normal(0,1,size = (self._N,self._dim) )
+        b =  np.random.normal(0,1,size = self._n_hidden )
+        W =  np.random.normal(0,1,size = (self._n_hidden, self._N, self._dim) )
+
+        initial_params = {"a": self.backend.array(a),"b": self.backend.array(b),"W": self.backend.array(W)}
+        
         self.params = Parameter(
             initial_params
         )  # I still do not understand what should be the alpha dim
