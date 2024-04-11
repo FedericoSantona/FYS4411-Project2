@@ -31,27 +31,24 @@ All the parameters you want to change are contained in the file config.py
 """
 # set up the system with its backend and level of logging, seed, and other general properties depending on how you want to run it
 
-alpha_values = np.array([ 0.2 , 0.3, 0.4, 0.5, 0.6, 0.7 , 0.8, 0.9, 1.0])
+
+n_iteration = 1000
 energies = []
-variances = []
-error = []
 
-
-for i in alpha_values:
+for i in range(n_iteration):
     
 
 
+    # set up the system with its backend and level of logging, seed, and other general properties depending on how you want to run it
     system = quantum_state.QS(
-    backend=config.backend,
-    log=True,
-    logger_level="INFO",
-    seed=config.seed,
-    alpha=i,
-    beta=config.beta,
-    radius = config.radius,
-    time_step=config.time_step,
-    diffusion_coeff=config.diffusion_coeff,
-    type_hamiltonian = config.hamiltonian
+        backend=config.backend,
+        log=True,
+        h_number=config.n_hidden,
+        logger_level="INFO",
+        seed=config.seed,
+        radius = config.radius,
+        time_step=config.time_step,
+        diffusion_coeff=config.diffusion_coeff
     )
 
 
@@ -61,11 +58,10 @@ for i in alpha_values:
         config.nparticles,
         config.dim,
     )
-
+    
 
     # choose the hamiltonian
     system.set_hamiltonian(type_=config.hamiltonian, int_type=config.interaction, omega=1.0)
-
 
     # choose the sampler algorithm and scale
     system.set_sampler(mcmc_alg=config.mcmc_alg, scale=config.scale)
@@ -78,48 +74,19 @@ for i in alpha_values:
     )
 
     # train the system, meaning we find the optimal variational parameters for the wave function
-    system.train(
+    alphas ,cycles = system.train(
         max_iter=config.training_cycles,
         batch_size=config.batch_size,
         seed=config.seed,
     )
 
     # now we get the results or do whatever we want with them
-    results, _, _ = system.sample(config.nsamples, nchains=config.nchains, seed=config.seed)
+    results , _ , _  = system.sample(config.nsamples, nchains=config.nchains, seed=config.seed)
 
-
-
-    print("alpha", i)
-    print("energy", results.energy)
     energies.append(results.energy)
-    error.append(results.std_error)
-    variances.append(results.variance)
-   
 
-
-print("Alpha values", alpha_values)
-print("Energies", energies)
-print("Errors", error)
-print("Variances", variances)
-
-
-fig, ax = plt.subplots(2, figsize=(10, 10))
-
-
-# Plotting Energy
-ax[0].plot(alpha_values, energies, "o-", label="Energy")
-ax[0].set_xlabel("Alpha")
-ax[0].set_ylabel("Energy")
-ax[0].set_title("Energy as a function of alpha in JAX calculation , N = 10 , dim = 3")
-ax[0].legend()
-
-# Plotting Variance
-ax[1].plot(alpha_values, variances, "o-", label="Variance")
-ax[1].set_xlabel("Alpha")
-ax[1].set_ylabel("Variance")
-ax[1].set_title("Variance as a function of alpha in JAX calculation , N = 10 , dim = 3")
-ax[1].legend()
-
-
-fig.savefig("energy_alpha.png")
+    
+    
+plt.hist(energies) 
+plt.savefig("histo.pdf")
 

@@ -32,9 +32,12 @@ class VMC:
         self._logger = logger
         self._N = nparticles
         self._dim = dim
+        self._M = self._N * self._dim
+       
         self._n_hidden = h_number
 
         self.radius = config.radius
+        self.batch_size = config.batch_size
         self._Nvis = self._dim*self._N
         
         
@@ -48,7 +51,7 @@ class VMC:
         self._initialize_vars(nparticles, dim, log, logger, logger_level)
 
         if self.log:
-            n_para = self._Nvis + self._n_hidden + self._n_hidden*self._Nvis
+            n_para = self._M + self._n_hidden + self._n_hidden*self._M
             msg = f"""VMC initialized with {self._N} particles in {self._dim} dimensions with {n_para} parameters"""
             self._logger.info(msg)
 
@@ -120,22 +123,7 @@ class VMC:
 
         return self.wf_closure(r, a, b, W)
 
-    def wf_closure_train(self, r, alpha):
-        """
-
-        r: (N, dim) array so that r_i is a dim-dimensional vector
-        alpha: (N, dim) array so that alpha_i is a dim-dimensional vector
-
-        return: should return Ψ(alpha, r)
-
-        OBS: We strongly recommend you work with the wavefunction in log domain.
-
-        """
-        wf = -alpha * (
-            self.beta**2 * (r[:, 0] ** 2) + self.backend.sum(r[:, 1:] ** 2, axis=1)
-        )
-
-        return wf
+    
 
     def wf_closure(self, r, a, b, W):
         """
@@ -149,18 +137,32 @@ class VMC:
         OBS: We strongly recommend you work with the wavefunction in log domain.
 
         """
+
+        
         first_sum =  0.25 * self.backend.sum((r-a)**2, axis = 1) 
 
         #lntrm = 1+self.backend.exp(b+self.backend.sum(self.backend.sum(r*W[None,:,:],axis = 2), axis = 1))
         #For how we were doing before we were making W a vector of shape (1 , N_hidden, N , dim)
         #And then we summed everything together and obtain something ugly, I think this is the correct way to do it
         #This way instead self.backend.sum(self.backend.sum(r[None,:,:]*W,axis = 2) has the shape of (N_hidden,)
-        lntrm = 1+self.backend.exp(b+self.backend.sum(self.backend.sum(r[None,:,:]*W,axis = 2), axis = 1))
+        lntrm =self.backend.log( 1+self.backend.exp(b+self.backend.sum(self.backend.sum(r[None,:,:]*W, axis = 2), axis = 1)))
+        
+
 
         second_sum = 0.5 * self.backend.sum(lntrm )
+        
         wf = -first_sum + second_sum
 
-        
+
+        """"
+        print( "  value " , r[None,:,:]*W)
+        print(" frist sum)" , self.backend.sum(r[None,:,:]*W, axis = 2))
+        print("second sum " , self.backend.sum(self.backend.sum(r[None,:,:]*W, axis = 2), axis = 1))
+        print("final sum " ,b+self.backend.sum(self.backend.sum(r[None,:,:]*W, axis = 2), axis = 1))
+        print("exp " , self.backend.exp(b+self.backend.sum(self.backend.sum(r[None,:,:]*W, axis = 2), axis = 1)))
+
+        breakpoint()
+        """
         return wf
 
     def prob(self, r):
@@ -221,8 +223,11 @@ class VMC:
         exp_term =  1+self.backend.exp(-(b+self.backend.sum(self.backend.sum(r[None,:,:]*W,axis = 2), axis = 1)))
         second_term = 0.5 * self.backend.sum(W / exp_term [:,None,None], axis = 0)
        
+        grad = -first_term + second_term
 
-        return -first_term + second_term
+        #print("grad", grad)
+
+        return grad
 
 
     def grad_wf_closure_jax(self, r, alpha):
@@ -246,22 +251,30 @@ class VMC:
 
         OBS: We strongly recommend you work with the wavefunction in log domain.
         """
-        alpha = self.params.get("alpha")  # Using Parameter.get to access alpha
+        a = self.params.get("a")  
+        b = self.params.get("b")
+        W = self.params.get("W") 
 
-        return self.grads_closure(r, alpha)
+        return self.grads_closure(r, a , b, W)
 
-    def grads_closure(self, r, alpha):
+    def grads_closure(self, r, a, b, W):
         """
         Computes the gradient of the wavefunction with respect to the variational parameters analytically
         """
 
-        # For the given trial wavefunction, the gradient with respect to alpha is the negative of the wavefunction
-        # times the sum of the squares of the positions, since the wavefunction is exp(-alpha * sum(r_i^2)).
-        grad_alpha = self.backend.sum(
-            -self.backend.sum(r**2, axis=2), axis=1
-        )  # The gradient with respect to alpha
+        #grad_a is of shape (N_batch , M)
+        grad_a = (0.5 * (r - a)).reshape(self.batch_size , self._M)
 
-        return grad_alpha
+
+        # grad_b is of shape (n_batch , n_hidden)
+        grad_b = 1 / (2*( 1+self.backend.exp(-(b+self.backend.sum(self.backend.sum(r[:,None,:]*W,axis = -1), axis = -1)))))
+
+        #grad_W is of shape (n_batch ,  M * N_hidden )
+        r_ = r.reshape(self.batch_size , self._M)
+        grad_W  = (r_[:,None,:] * grad_b[:,:,None]).reshape(self.batch_size , self._n_hidden * self._M)
+        
+
+        return grad_a , grad_b , grad_W
 
     def grads_closure_jax(self, r, alpha):
         """
@@ -308,6 +321,7 @@ class VMC:
         #use  axis = (0,2) if you want to output of shape (N,) instead of (N,dim)
         #It doesnt make a difference on its own I only depends on how we will develop the code further
 
+        #print("laplacian", laplacian)
 
         return laplacian
 
@@ -370,11 +384,11 @@ class VMC:
         # Take a look at the qs.utils.Parameter class. You may or may not use it depending on how you implement your code.
         
         # Initialize the Boltzmann machine parameters
-        a =  np.random.normal(0,1,size = (self._N, self._dim) )
+        a =  np.random.normal(0,1,size = (self._N ,self._dim) )
         b =  np.random.normal(0,1,size = self._n_hidden )
+        W =  np.random.normal(0,1,size = (self._n_hidden, self._N , self._dim) )
 
-        W =  np.random.normal(0,1,size = (self._n_hidden, self._N, self._dim) )
-
+        
         initial_params = {"a": self.backend.array(a),"b": self.backend.array(b),"W": self.backend.array(W)}
         
         self.params = Parameter(

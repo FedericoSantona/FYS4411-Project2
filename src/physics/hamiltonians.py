@@ -86,7 +86,7 @@ class HarmonicOscillator(Hamiltonian):
         third_term = r**2
 
         #The sum without specific axis is the sum of all elements in the array i.e. returns a scalar
-        non_int_energy = -0.5 *self.backend.sum(-first_term - second_term + third_term) 
+        non_int_energy = 0.5 *self.backend.sum(-first_term - second_term + third_term) 
 
         return non_int_energy
 

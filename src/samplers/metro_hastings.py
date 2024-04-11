@@ -58,6 +58,8 @@ class MetropolisHastings(Sampler):
     def step(self, wf_squared, state, seed):
         """One step of the importance sampling Metropolis-Hastings algorithm."""
         initial_positions = state.positions
+
+        #print("initial_positions", initial_positions)
         quantum_force_init = 2 * self.alg_inst.grad_wf(initial_positions)
         # Use the current positions to generate the quantum force
         # Generate a proposal move
@@ -71,6 +73,8 @@ class MetropolisHastings(Sampler):
             + self.diffusion_coeff * quantum_force_init * self.time_step
             + eta * (self.backend.sqrt(self.time_step))
         )
+
+       # print("proposed_positions", proposed_positions)
         # Calculate wave function squared for current and proposed positions
         prob_current = wf_squared(initial_positions)
         prob_proposed = wf_squared(proposed_positions)
@@ -85,9 +89,13 @@ class MetropolisHastings(Sampler):
             self.diffusion_coeff,
             self.time_step,
         )
+
+
         # Decide on acceptance
         accept = rng.random(self._N) < self.backend.exp(q_value)
         accept = accept.reshape(-1, 1)
+
+        #print("accept", accept)
         # Update positions based on acceptance
         new_positions, new_logp, n_accepted = self.accept_func(
             n_accepted=state.n_accepted,
@@ -117,15 +125,21 @@ class MetropolisHastings(Sampler):
 
         q_force_proposed = 2 * self.alg_inst.grad_wf(proposed_positions)
 
+        
+
         # Calculate wave function squared for current and proposed positions
         v_init = proposed_positions - initial_positions - D * dt * q_force_init
         v_proposed = initial_positions - proposed_positions - D * dt * q_force_proposed
 
+
+       
         Gfunc_init = -self.backend.sum(v_init**2, axis=1) / (D * dt * 4)
         Gfunc_proposed = -self.backend.sum(v_proposed**2, axis=1) / (D * dt * 4)
 
+       
         q_value = Gfunc_proposed - Gfunc_init + prob_proposed - prob_init
 
+    
         return q_value, proposed_positions
 
     def accept_func(

@@ -30,6 +30,7 @@ from samplers.metropolis import Metropolis as Metro
 from samplers.metro_hastings import MetropolisHastings as MetroHastings
 
 from optimizers.gd import Gd as gd_opt
+from optimizers.gd import Adam as adam_opt
 
 warnings.filterwarnings("ignore", message="divide by zero encountered")
 
@@ -134,6 +135,9 @@ class QS:
         self.alg._initialize_vars(
             self._N, self._dim, self._log, self.logger, self.logger_level
         )
+        self.a = self.alg.params.get("a")
+        self.b = self.alg.params.get("b")
+        self.W = self.alg.params.get("W")
 
         if self._wf_type == "vmc":
             self.wf = self.alg.wf
@@ -221,8 +225,25 @@ class QS:
         self._eta = eta
         if optimizer == "gd":
             self._optimizer = gd_opt(eta=eta)
+        elif optimizer == "adam":
+            self._optimizer = adam_opt(eta=eta)
         else:
-            raise ValueError("Invalid optimizer type, should be 'gd'")
+            raise ValueError("Invalid optimizer type, should be 'gd' or 'adam'")
+
+
+
+    def loc_energy_grad(self, grads, local_energies):
+
+        first_term = self.backend.mean(grads
+                                       * local_energies.reshape(self._training_batch , 1)   , axis=0 )
+        second_term = self.backend.mean(grads , axis = 0 ) * self.backend.mean(
+            local_energies
+        )
+        grads  = 2 * (first_term - second_term)
+
+
+        return grads
+
 
     
     def train(self, max_iter, batch_size, seed, tol=1e-6, **kwargs):
@@ -230,13 +251,12 @@ class QS:
         Train the wave function parameters.
         Here you should calculate sampler statistics and update the wave function parameters based on the derivative of the (statistical) local energy.
         
-
+        """
         self._is_initialized()
         self._training_cycles = max_iter
         self._training_batch = batch_size
         self.sampler._log = False  # Hides the sampling progressbar that will
                                 # pop-up in each training iteration
-        alphas = []
         cycles = []
         self._log = False
         if self._log:
@@ -252,7 +272,6 @@ class QS:
 
         with tqdm(
             total=max_iter,
-            desc=rf"[Training progress, alpha={float(self.alpha):.4f}]",
             position=0,
             leave=True,
             colour="green",
@@ -265,52 +284,63 @@ class QS:
                 )
 
                 # sampled positions is of shape (batch_size, nparticles, dim)
-                grads = self.alg.grads(sampled_positions)
-                first_term = self.backend.mean(
-                    grads.reshape(self._training_batch, 1)
-                    * local_energies.reshape(self._training_batch, 1)
-                )
-                second_term = self.backend.mean(grads) * self.backend.mean(
-                    local_energies
-                )
-                grads_alpha = 2 * (first_term - second_term)
 
-                alphas.append(self.alpha)
+                #Calculate the gradient of the local energy
+
+                grads_a , grads_b , grads_W = self.alg.grads(sampled_positions)
+
+                G_a = self.loc_energy_grad(grads_a, local_energies)
+                G_b = self.loc_energy_grad(grads_b, local_energies)
+                G_W = self.loc_energy_grad(grads_W, local_energies)
+
+                G_a = G_a.reshape(self._N, self._dim)
+                G_b = G_b.reshape(self._h_number)
+                G_W = G_W.reshape(self._h_number, self._N, self._dim)
+
                 cycles.append(iteration)
                 # Ensure alpha and its gradient are iterables
-                self.alpha = self.backend.array(
-                    self._optimizer.step([self.alpha], [grads_alpha])
+                self.a = self.backend.array(
+                    self._optimizer.step([self.a], [G_a])
+                )[0]
+
+                self.b = self.backend.array(
+                    self._optimizer.step([self.b], [G_b])
+                )[0]
+
+                self.W = self.backend.array(
+                    self._optimizer.step([self.W], [G_W])
                 )[0]
 
                 # Update the progressbar to show the current alpha value
                 pbar.set_description(
-                    rf"[Training progress, alpha={float(self.alpha):.4f}]"
+                    rf"[Training progress]"
                 )
                 pbar.update(1)
+
+                """
                 # Update the alpha in the Parameter instance
                 old_alpha = self.alg.params.get("alpha")
                 diff_alpha = np.abs(old_alpha - self.alpha)
                 if diff_alpha < tol:
                     print(f"Converged after {iteration} iterations")
                     break
-                self.alg.params.set("alpha", self.alpha)
+                    
 
+                """
+
+                self.alg.params.set("a", self.a)
+                self.alg.params.set("b", self.b)
+                self.alg.params.set("W", self.W)
+
+                
         self.sampler._log = (
             True  # Show the sampling progress after the training has finished
         )
         self._is_trained_ = True
-        print("Alpha after training", self.alg.params.get("alpha"))
 
         if self.logger is not None:
             self.logger.info("Training done")
 
-            """
-        alphas = 1
-        cycles = 1
-        self._training_cycles = 0
-        self._training_batch = 0
-
-        return alphas, cycles
 
     def sample(self, nsamples, nchains=1, seed=None):
         """helper for the sample method from the Sampler class"""

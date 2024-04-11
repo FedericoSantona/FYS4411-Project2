@@ -49,4 +49,14 @@ laplacian2 = -0.5 +0.5*np.sum(W**2 * term[:,None,None], axis = (0,2))
 
 
 
+#grad for params
+
+
+grad_a = 0.5 * (r - a)
+        
+grad_b = 1 / (2*( 1+np.exp(-(b+np.sum(np.sum(r[None,:,:]*W,axis = 2), axis = 1)))))
+
+grad_W  = r * grad_b[:,None,None]
+
+
 breakpoint()

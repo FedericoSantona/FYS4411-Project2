@@ -69,7 +69,7 @@ system.set_optimizer(
 print("System initialization: Complete..")
 
 # train the system, meaning we find the optimal variational parameters for the wave function
-alphas ,cycles = system.train(
+system.train(
     max_iter=config.training_cycles,
     batch_size=config.batch_size,
     seed=config.seed,
