@@ -69,7 +69,7 @@ system.set_optimizer(
 print("System initialization: Complete..")
 
 # train the system, meaning we find the optimal variational parameters for the wave function
-system.train(
+cycles , a_values , b_values , W_values , energies = system.train(
     max_iter=config.training_cycles,
     batch_size=config.batch_size,
     seed=config.seed,
@@ -87,3 +87,36 @@ print("Result Energy: ", results.energy)
 print(f"Acceptance rate: {results.accept_rate}")
 
 print(f"Execution time: {execution_time} seconds")
+
+
+for i in range(config.nparticles*config.dim):
+    plt.plot(cycles, np.transpose(a_values)[i], label=f"a_{i}")
+
+plt.legend()
+plt.savefig("a_values.pdf")
+plt.close()
+
+for i in range(config.n_hidden):
+    plt.plot(cycles, np.transpose(b_values)[i], label=f"b_{i}")
+
+plt.legend()
+plt.savefig("b_values.pdf")
+plt.close()
+
+
+for i in range(config.n_hidden * config.nparticles*config.dim):
+    plt.plot(cycles, np.transpose(W_values)[i], label=f"W_{i}")
+
+plt.savefig("W_values.pdf")
+plt.close()
+
+
+plt.plot(cycles, energies, label="Energy")
+plt.legend()
+plt.savefig("energy.pdf")
+
+
+
+
+
+

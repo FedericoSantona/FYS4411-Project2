@@ -45,6 +45,8 @@ class Metropolis(Sampler):
         prob_proposed = wf_squared(proposed_positions)
         # Calculate acceptance probability in log domain
         log_accept_prob = prob_proposed - prob_current
+
+       
         # Decide on acceptance
         accept = rng.random(initial_positions.shape[0]) < np.exp(
             log_accept_prob

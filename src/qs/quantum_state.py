@@ -258,6 +258,11 @@ class QS:
         self.sampler._log = False  # Hides the sampling progressbar that will
                                 # pop-up in each training iteration
         cycles = []
+        a_values = []
+        b_values = []
+        W_values = []
+        energies = []
+
         self._log = False
         if self._log:
             t_range = tqdm(
@@ -298,6 +303,7 @@ class QS:
                 G_W = G_W.reshape(self._h_number, self._N, self._dim)
 
                 cycles.append(iteration)
+                
                 # Ensure alpha and its gradient are iterables
                 self.a = self.backend.array(
                     self._optimizer.step([self.a], [G_a])
@@ -313,7 +319,7 @@ class QS:
 
                 # Update the progressbar to show the current alpha value
                 pbar.set_description(
-                    rf"[Training progress]"
+                    rf"[Training progress] , Energy : {self.backend.mean(local_energies):.4f}"
                 )
                 pbar.update(1)
 
@@ -327,6 +333,10 @@ class QS:
                     
 
                 """
+                a_values.append(self.a.flatten())
+                b_values.append(self.b.flatten())
+                W_values.append(self.W.flatten())
+                energies.append(self.backend.mean(local_energies))
 
                 self.alg.params.set("a", self.a)
                 self.alg.params.set("b", self.b)
@@ -340,6 +350,8 @@ class QS:
 
         if self.logger is not None:
             self.logger.info("Training done")
+
+        return cycles, a_values, b_values, W_values , energies
 
 
     def sample(self, nsamples, nchains=1, seed=None):

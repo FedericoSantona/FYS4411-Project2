@@ -146,14 +146,13 @@ class VMC:
         #And then we summed everything together and obtain something ugly, I think this is the correct way to do it
         #This way instead self.backend.sum(self.backend.sum(r[None,:,:]*W,axis = 2) has the shape of (N_hidden,)
         lntrm =self.backend.log( 1+self.backend.exp(b+self.backend.sum(self.backend.sum(r[None,:,:]*W, axis = 2), axis = 1)))
-        
-
+    
 
         second_sum = 0.5 * self.backend.sum(lntrm )
         
-        wf = -first_sum + second_sum
+        wf = -first_sum + second_sum 
 
-
+        
         """"
         print( "  value " , r[None,:,:]*W)
         print(" frist sum)" , self.backend.sum(r[None,:,:]*W, axis = 2))
@@ -384,9 +383,9 @@ class VMC:
         # Take a look at the qs.utils.Parameter class. You may or may not use it depending on how you implement your code.
         
         # Initialize the Boltzmann machine parameters
-        a =  np.random.normal(0,1,size = (self._N ,self._dim) )
-        b =  np.random.normal(0,1,size = self._n_hidden )
-        W =  np.random.normal(0,1,size = (self._n_hidden, self._N , self._dim) )
+        a =   np.random.normal(0,config.init_scale,size = (self._N ,self._dim) )
+        b =  np.random.normal(0,config.init_scale,size = self._n_hidden )
+        W =  np.random.normal(0,config.init_scale,size = (self._n_hidden, self._N , self._dim) )
 
         
         initial_params = {"a": self.backend.array(a),"b": self.backend.array(b),"W": self.backend.array(W)}

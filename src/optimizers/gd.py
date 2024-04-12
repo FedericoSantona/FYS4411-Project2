@@ -77,6 +77,7 @@ class Adam(Optimizer):
             m_hat = m / (1 - self.beta1 ** self.t)
             v_hat = v / (1 - self.beta2 ** self.t)
 
+            breakpoint()
             # Update parameters
             p -= self.eta * m_hat / (v_hat ** 0.5 + self.epsilon)
 
