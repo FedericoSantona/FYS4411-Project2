@@ -91,6 +91,7 @@ class Sampler:
         if seed is None:
             seed = self._seed
 
+        self.alg.state.n_accepted = 0
         sampled_positions = []
         local_energies = []  # List to store local energies
         for _ in t_range:  # Here use range(nsamples) if you train
@@ -103,14 +104,15 @@ class Sampler:
 
         if self._logger is not None:
             pass
-
+        """
         # Calculate acceptance rate and convert lists to arrays
         if config.training_cycles != 0 and nsamples != 0:
             acceptance_rate = self.alg.state.n_accepted / (
                 nsamples * self.alg._N * self.n_training_cycles
             )
         else:
-            acceptance_rate = self.alg.state.n_accepted / (nsamples * self.alg._N)
+        """
+        acceptance_rate = self.alg.state.n_accepted / (nsamples * self.alg._N)
         local_energies = self.backend.array(local_energies)
         sampled_positions = self.backend.array(sampled_positions)
         mean_positions = self.backend.mean(self.backend.abs(sampled_positions), axis=0)
