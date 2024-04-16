@@ -38,7 +38,7 @@ class VMC:
 
         self.radius = config.radius
         self.batch_size = config.batch_size
-        self._Nvis = self._dim*self._N
+        
         
         
         self.rng = random.PRNGKey(self._seed)  # Initialize RNG with the provided seed
@@ -138,30 +138,16 @@ class VMC:
 
         """
 
-        
-        first_sum =  0.25 * self.backend.sum((r-a)**2, axis = 1) 
-
-        #lntrm = 1+self.backend.exp(b+self.backend.sum(self.backend.sum(r*W[None,:,:],axis = 2), axis = 1))
-        #For how we were doing before we were making W a vector of shape (1 , N_hidden, N , dim)
-        #And then we summed everything together and obtain something ugly, I think this is the correct way to do it
-        #This way instead self.backend.sum(self.backend.sum(r[None,:,:]*W,axis = 2) has the shape of (N_hidden,)
-        lntrm =self.backend.log( 1+self.backend.exp(b+self.backend.sum(self.backend.sum(r[None,:,:]*W, axis = 2), axis = 1)))
-    
-
-        second_sum = 0.5 * self.backend.sum(lntrm )
-        
-        wf = -first_sum + second_sum 
+        r_flat = r.flatten()
+        first_sum =  0.25 * self.backend.sum((r_flat-a)**2) 
 
         
-        """"
-        print( "  value " , r[None,:,:]*W)
-        print(" frist sum)" , self.backend.sum(r[None,:,:]*W, axis = 2))
-        print("second sum " , self.backend.sum(self.backend.sum(r[None,:,:]*W, axis = 2), axis = 1))
-        print("final sum " ,b+self.backend.sum(self.backend.sum(r[None,:,:]*W, axis = 2), axis = 1))
-        print("exp " , self.backend.exp(b+self.backend.sum(self.backend.sum(r[None,:,:]*W, axis = 2), axis = 1)))
+        lntrm =self.backend.log( 1+self.backend.exp(b+self.backend.sum(r_flat[:, None]*W , axis = 0)))
 
-        breakpoint()
-        """
+        second_sum = 0.5 * self.backend.sum(lntrm)
+        
+        wf = -first_sum + second_sum
+        
         return wf
 
     def prob(self, r):
@@ -207,24 +193,23 @@ class VMC:
         Is overwritten by the JAX version if backend is JAX
 
         r: (N, dim) array so that r_i is a dim-dimensional vector
-        a: (N, dim) array so that a_i is a dim-dimensional vector
-        b: (N, 1) array represents the number of hidden nodes
-        W: (N_hidden, N , dim) array represents the weights
+        a: (M ,) array so that a_i is a dim-dimensional vector
+        b: (N_hidd, ) array represents the number of hidden nodes
+        W: (M , N_hidd) array represents the weights
 
 
-        Here the output will be of shape (N, dim) because in the Local Energy formula 
-        we want  to be able to sum every node and then square it, so we need to have the same shape as r
-        in order to conserve all the information
+        Here the output will be of shape (M ,) because we are taking the gradient with respect to
+        every visible nodes and conserve the informations
         """
+        r_flat = r.flatten()
 
-        first_term = 0.5 * (r - a) 
+        first_term = 0.5 * (r_flat - a )
 
-        exp_term =  1+self.backend.exp(-(b+self.backend.sum(self.backend.sum(r[None,:,:]*W,axis = 2), axis = 1)))
-        second_term = 0.5 * self.backend.sum(W / exp_term [:,None,None], axis = 0)
-       
+        exp_term =   1+self.backend.exp(-(b+self.backend.sum(r_flat[:, None]*W , axis = 0)))
+
+        second_term = 0.5 * self.backend.sum(W / exp_term , axis = 1)
+        
         grad = -first_term + second_term
-
-        #print("grad", grad)
 
         return grad
 
@@ -259,18 +244,23 @@ class VMC:
     def grads_closure(self, r, a, b, W):
         """
         Computes the gradient of the wavefunction with respect to the variational parameters analytically
+
+        Here r comes in shape (n_batch , n_particles , n_dim)
         """
 
+        r_flat = r.reshape(self.batch_size , -1)
+
+
         #grad_a is of shape (N_batch , M)
-        grad_a = (0.5 * (r - a)).reshape(self.batch_size , self._M)
+        grad_a = (0.5 * (r_flat - a))
 
 
         # grad_b is of shape (n_batch , n_hidden)
-        grad_b = 1 / (2*( 1+self.backend.exp(-(b+self.backend.sum(self.backend.sum(r[:,None,:]*W,axis = -1), axis = -1)))))
+        grad_b = 1 / (2*( 1+self.backend.exp(-(b+self.backend.sum(r_flat[:,: ,None]*W[None,:,:] , axis = 1)))))
 
         #grad_W is of shape (n_batch ,  M * N_hidden )
-        r_ = r.reshape(self.batch_size , self._M)
-        grad_W  = (r_[:,None,:] * grad_b[:,:,None]).reshape(self.batch_size , self._n_hidden * self._M)
+        
+        grad_W  = (r_flat[:,:,None] * grad_b[:,None,:]).reshape(self.batch_size , self._M * self._n_hidden)
         
 
         return grad_a , grad_b , grad_W
@@ -308,19 +298,17 @@ class VMC:
     def laplacian_closure(self, r, a , b , W):
         """
         Analytical expression for the laplacian of the wavefunction
+        Here the output is still of shape (M,) conserving the laplacian
+        for each visible node
         """
+        r_flat = r.flatten()
         
-        num = self.backend.exp(b+self.backend.sum(self.backend.sum(r[None,:,:]*W, axis = 2), axis = 1))
-        den = (1+self.backend.exp(b+self.backend.sum(self.backend.sum(r[None,:,:]*W,axis = 2), axis = 1)))**2
+        num = self.backend.exp(b+self.backend.sum(r_flat[:, None]*W , axis = 0))
+        den = (1+self.backend.exp(b+self.backend.sum(r_flat[:, None]*W , axis = 0)))**2
 
         term = num/den
 
-        laplacian = -0.5 +0.5*self.backend.sum(W**2 * term[:,None,None], axis = 0)
-
-        #use  axis = (0,2) if you want to output of shape (N,) instead of (N,dim)
-        #It doesnt make a difference on its own I only depends on how we will develop the code further
-
-        #print("laplacian", laplacian)
+        laplacian = -0.5 +0.5*self.backend.sum(W**2 * term, axis = 1)
 
         return laplacian
 
@@ -383,9 +371,9 @@ class VMC:
         # Take a look at the qs.utils.Parameter class. You may or may not use it depending on how you implement your code.
         
         # Initialize the Boltzmann machine parameters
-        a =   np.random.normal(0,config.init_scale,size = (self._N ,self._dim) )
+        a =   np.random.normal(0,config.init_scale,size = self._M )
         b =  np.random.normal(0,config.init_scale,size = self._n_hidden )
-        W =  np.random.normal(0,config.init_scale,size = (self._n_hidden, self._N , self._dim) )
+        W =  np.random.normal(0,config.init_scale,size = (self._M , self._n_hidden) )
 
         
         initial_params = {"a": self.backend.array(a),"b": self.backend.array(b),"W": self.backend.array(W)}

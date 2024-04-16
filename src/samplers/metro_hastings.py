@@ -60,20 +60,20 @@ class MetropolisHastings(Sampler):
         initial_positions = state.positions
 
         #print("initial_positions", initial_positions)
-        quantum_force_init = 2 * self.alg_inst.grad_wf(initial_positions)
+        quantum_force_init = (2 * self.alg_inst.grad_wf(initial_positions)).reshape(self._N, self._dim)
         # Use the current positions to generate the quantum force
         # Generate a proposal move
         next_gen = advance_PRNG_state(seed, state.delta)
         rng = self._rng(next_gen)
-
         # Generate a proposal move
-        eta = rng.normal(loc=0, scale=1, size=(self._N, self._dim))
+        eta = rng.normal(loc=0, scale=1, size=(self._N , self._dim))
         proposed_positions = (
             initial_positions
             + self.diffusion_coeff * quantum_force_init * self.time_step
             + eta * (self.backend.sqrt(self.time_step))
         )
 
+        
        # print("proposed_positions", proposed_positions)
         # Calculate wave function squared for current and proposed positions
         prob_current = wf_squared(initial_positions)
@@ -90,9 +90,8 @@ class MetropolisHastings(Sampler):
             self.time_step,
         )
 
-
         # Decide on acceptance
-        accept = rng.random(self._N) < self.backend.exp(q_value)
+        accept = rng.random() < self.backend.exp(q_value)
         accept = accept.reshape(-1, 1)
 
         #print("accept", accept)
@@ -123,7 +122,7 @@ class MetropolisHastings(Sampler):
         dt,
     ):
 
-        q_force_proposed = 2 * self.alg_inst.grad_wf(proposed_positions)
+        q_force_proposed = (2 * self.alg_inst.grad_wf(proposed_positions)).reshape(self._N, self._dim)
 
         
 
@@ -132,9 +131,9 @@ class MetropolisHastings(Sampler):
         v_proposed = initial_positions - proposed_positions - D * dt * q_force_proposed
 
 
-       
-        Gfunc_init = -self.backend.sum(v_init**2, axis=1) / (D * dt * 4)
-        Gfunc_proposed = -self.backend.sum(v_proposed**2, axis=1) / (D * dt * 4)
+       #Now here should I sum along dimensions or sum it all? I think sum it all
+        Gfunc_init = -self.backend.sum(v_init**2) / (D * dt * 4)
+        Gfunc_proposed = -self.backend.sum(v_proposed**2) / (D * dt * 4)
 
        
         q_value = Gfunc_proposed - Gfunc_init + prob_proposed - prob_init

@@ -115,6 +115,7 @@ class QS:
 
         self._N = nparticles
         self._dim = dim
+        self._M = self._N * self._dim
         self._wf_type = wf_type
 
     
@@ -298,9 +299,7 @@ class QS:
                 G_b = self.loc_energy_grad(grads_b, local_energies)
                 G_W = self.loc_energy_grad(grads_W, local_energies)
 
-                G_a = G_a.reshape(self._N, self._dim)
-                G_b = G_b.reshape(self._h_number)
-                G_W = G_W.reshape(self._h_number, self._N, self._dim)
+                G_W = G_W.reshape(self._M, self._h_number )
 
                 cycles.append(iteration)
                 

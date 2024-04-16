@@ -61,15 +61,16 @@ class Adam(Optimizer):
         Returns:
             list: Updated parameters.
         """
-        if self.m is None:
-            self.m = [0] * len(params)
-        if self.v is None:
-            self.v = [0] * len(params)
+        
+        self.m = [0] * len(params)
+        self.v = [0] * len(params)
 
         self.t += 1
 
         updated_params = []
         for p, g, m, v in zip(params, grads, self.m, self.v):
+
+           
             m = self.beta1 * m + (1 - self.beta1) * g
             v = self.beta2 * v + (1 - self.beta2) * (g ** 2)
 
@@ -77,7 +78,7 @@ class Adam(Optimizer):
             m_hat = m / (1 - self.beta1 ** self.t)
             v_hat = v / (1 - self.beta2 ** self.t)
 
-            breakpoint()
+           # breakpoint()
             # Update parameters
             p -= self.eta * m_hat / (v_hat ** 0.5 + self.epsilon)
 

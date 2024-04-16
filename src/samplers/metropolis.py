@@ -39,19 +39,21 @@ class Metropolis(Sampler):
         next_gen = advance_PRNG_state(seed, state.delta)
         rng = self._rng(next_gen)
         # Generate a proposal move
-        proposed_positions = rng.normal(loc=initial_positions, scale=self.scale)
+
+        proposed_positions = rng.normal(loc=initial_positions , scale=self.scale)
+
         # Calculate log probability densities for current and proposed positions
         prob_current = wf_squared(initial_positions)
         prob_proposed = wf_squared(proposed_positions)
         # Calculate acceptance probability in log domain
         log_accept_prob = prob_proposed - prob_current
 
-       
         # Decide on acceptance
-        accept = rng.random(initial_positions.shape[0]) < np.exp(
+        accept = rng.random() < np.exp(
             log_accept_prob
         )
-        accept = accept.reshape(-1, 1)
+        
+        #breakpoint()
         new_positions, new_logp, n_accepted = self.accept_func(
             n_accepted=state.n_accepted,
             accept=accept,
@@ -63,8 +65,8 @@ class Metropolis(Sampler):
 
         # Create new state by updating state variables.
         state.logp = new_logp
-        state.n_accepted = n_accepted
         state.delta += 1
+        state.n_accepted = n_accepted
         state.positions = new_positions
         state.r_dist = new_positions[None, ...] - new_positions[:, None, :]
 
