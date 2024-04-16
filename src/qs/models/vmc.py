@@ -141,7 +141,6 @@ class VMC:
         r_flat = r.flatten()
         first_sum =  0.25 * self.backend.sum((r_flat-a)**2) 
 
-        
         lntrm =self.backend.log( 1+self.backend.exp(b+self.backend.sum(r_flat[:, None]*W , axis = 0)))
 
         second_sum = 0.5 * self.backend.sum(lntrm)
@@ -208,7 +207,16 @@ class VMC:
         exp_term =   1+self.backend.exp(-(b+self.backend.sum(r_flat[:, None]*W , axis = 0)))
 
         second_term = 0.5 * self.backend.sum(W / exp_term , axis = 1)
-        
+
+        """
+        second_term1 = []
+        for m in range(self._M):
+            second_term1.append([])
+            for n in range(self._n_hidden):
+                second_term1[-1].append(W[m,n] / exp_term[n])
+        second_term1 = 0.5*np.sum(np.array(second_term1), axis = 1)
+        """
+
         grad = -first_term + second_term
 
         return grad

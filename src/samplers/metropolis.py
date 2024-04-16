@@ -52,6 +52,8 @@ class Metropolis(Sampler):
         accept = rng.random() < np.exp(
             log_accept_prob
         )
+
+        
         
         #breakpoint()
         new_positions, new_logp, n_accepted = self.accept_func(

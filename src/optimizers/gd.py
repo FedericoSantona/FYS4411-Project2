@@ -1,4 +1,5 @@
 from optimizers.optimizer import Optimizer  # Adjusted import for standalone execution
+import numpy as np
 
 class Gd(Optimizer):
     """Gradient descent optimizer."""
@@ -12,7 +13,7 @@ class Gd(Optimizer):
         """
         super().__init__(eta)
 
-    def step(self, params, grads):
+    def step(self, params, grads , ite):
         """
         Update the parameters using gradient descent.
 
@@ -23,7 +24,9 @@ class Gd(Optimizer):
         Returns:
             list: Updated parameters.
         """
-        updated_params = [p - self.eta * g for p, g in zip(params, grads)]
+
+        t =  self.eta / (1 + ite)
+        updated_params = [p - t * g for p, g in zip(params, grads)]
 
         #print("updated_params", updated_params)
         return updated_params
@@ -50,7 +53,7 @@ class Adam(Optimizer):
         self.v = None  # Second moment vector
         self.t = 0     # Initialization of the time step (for bias correction)
 
-    def step(self, params, grads):
+    def step(self, params, grads , ite):
         """
         Update the parameters using the Adam optimization algorithm.
 

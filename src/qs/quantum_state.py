@@ -305,15 +305,15 @@ class QS:
                 
                 # Ensure alpha and its gradient are iterables
                 self.a = self.backend.array(
-                    self._optimizer.step([self.a], [G_a])
+                    self._optimizer.step([self.a], [G_a] , ite=iteration)
                 )[0]
 
                 self.b = self.backend.array(
-                    self._optimizer.step([self.b], [G_b])
+                    self._optimizer.step([self.b], [G_b] , ite=iteration)
                 )[0]
 
                 self.W = self.backend.array(
-                    self._optimizer.step([self.W], [G_W])
+                    self._optimizer.step([self.W], [G_W] , ite=iteration)
                 )[0]
 
                 # Update the progressbar to show the current alpha value
