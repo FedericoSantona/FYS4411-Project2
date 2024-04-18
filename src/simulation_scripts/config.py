@@ -2,22 +2,23 @@
 output_filename = "../data/vmc_playground.csv"
 import numpy as np
 
-nparticles = 1
-dim = 1
-init_scale = 1 / np.sqrt(nparticles * dim )
-n_hidden = 6
-nsamples =  int(2**16) #  2**18 = 262144
+nparticles = 10
+dim = 3
+n_hidden = 100
+init_scale = 1 / np.sqrt(nparticles * dim * n_hidden)
+nsamples =  int(2**12) #  2**18 = 262144
 scale = 1+ (dim-1)*0.1
-nchains = 1# number of Markov chains. When you parallelize, you can set this to the number of cores. Note you will have to implement this yourself.
-eta = 0.01
-training_cycles = 1000 # this is cycles for the ansatz
+nchains = 4# number of Markov chains. When you parallelize, you can set this to the number of cores. Note you will have to implement this yourself.
+eta = 0.1
+tol = 1e-6  #tolerance for the size of the gradient
+training_cycles = 2000 # this is cycles for the ansatz
 mcmc_alg = "mh" # eiteer "mh" or "m"
 backend = "numpy" # or "numpy" but jax should go faster because of the jit
-optimizer = "gd"
+optimizer = "adam"
 hamiltonian = "ho" # either ho or eo 
-interaction = "None" # either Coulomb or None
+interaction = "Coulomb" # either Coulomb or None
 radius =  0 #0.0043
-batch_size = 200
+batch_size = 600
 detailed = True
 wf_type = "vmc" 
 seed = 142

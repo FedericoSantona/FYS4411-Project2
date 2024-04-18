@@ -84,6 +84,8 @@ execution_time = end_time - start_time
 # display the results
 print("Metrics: ", results)
 print("Result Energy: ", results.energy)
+print("variance " , results.variance)
+print("standard deviation from mean " , results.std_error)
 print(f"Acceptance rate: {results.accept_rate}")
 
 print(f"Execution time: {execution_time} seconds")

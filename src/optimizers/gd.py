@@ -1,5 +1,6 @@
 from optimizers.optimizer import Optimizer  # Adjusted import for standalone execution
 import numpy as np
+from simulation_scripts import config
 
 class Gd(Optimizer):
     """Gradient descent optimizer."""
@@ -70,6 +71,8 @@ class Adam(Optimizer):
 
         self.t += 1
 
+        t_ =  self.eta / (1 + 5 * (ite/ config.nparticles) )
+
         updated_params = []
         for p, g, m, v in zip(params, grads, self.m, self.v):
 
@@ -83,7 +86,7 @@ class Adam(Optimizer):
 
            # breakpoint()
             # Update parameters
-            p -= self.eta * m_hat / (v_hat ** 0.5 + self.epsilon)
+            p -= t_ * m_hat / (v_hat ** 0.5 + self.epsilon)
 
             updated_params.append(p)
 
