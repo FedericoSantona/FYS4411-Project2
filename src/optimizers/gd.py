@@ -70,6 +70,8 @@ class Adam(Optimizer):
 
         self.t += 1
 
+        t_ =  self.eta / np.sqrt(1 + ite)
+
         updated_params = []
         for p, g, m, v in zip(params, grads, self.m, self.v):
 
@@ -83,7 +85,7 @@ class Adam(Optimizer):
 
            # breakpoint()
             # Update parameters
-            p -= self.eta * m_hat / (v_hat ** 0.5 + self.epsilon)
+            p -= t_* m_hat / (v_hat ** 0.5 + self.epsilon)
 
             updated_params.append(p)
 

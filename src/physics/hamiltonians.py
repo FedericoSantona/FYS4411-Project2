@@ -70,10 +70,14 @@ class HarmonicOscillator(Hamiltonian):
     
     def CoulombInteraction(self, r):
         r_copy = r.copy()
-        r_dist = self.la.norm(r_copy[None, ...] - r_copy[:, None, :], axis=-1)
-        r_dist = self.backend.where(r_dist < config.radius, 0, r_dist)     
+        a, b = self.backend.triu_indices(r_copy[:,0].size,1)
+        r_dist = self.la.norm(r_copy[a] - r_copy[b], axis=1)
+        #r_dist = self.la.norm(r_copy[None, ...] - r_copy[:, None, :], axis=-1)
+        #r_dist = self.backend.where(r_dist < config.radius, 0, r_dist)     
+        #breakpoint()
         int_energy = self.backend.sum(
-            self.backend.triu(1 / r_dist, k=1)
+            #self.backend.triu(1 / r_dist, k=1)
+            1/r_dist
         )   # Calculates the upper triangular of the distance matrix (to not do a double sum)
 
         return int_energy
@@ -83,10 +87,10 @@ class HarmonicOscillator(Hamiltonian):
 
         first_term = self.alg_int.grad_wf(r)**2
         second_term = self.alg_int.laplacian(r)
-        third_term = (r**2).flatten()
-
+        third_term = 0.25*(r**2).flatten()
+        
         #The sum without specific axis is the sum of all elements in the array i.e. returns a scalar
-        non_int_energy = 0.5 *self.backend.sum(-first_term - second_term + third_term) 
+        non_int_energy = self.backend.sum(-first_term - second_term + third_term) 
 
         return non_int_energy
 
