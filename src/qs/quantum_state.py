@@ -19,7 +19,7 @@ jax.config.update("jax_platform_name", "cpu")
 
 import numpy as np
 import pandas as pd
-
+from simulation_scripts import config
 from qs.models import VMC
 
 from numpy.random import default_rng
@@ -247,7 +247,7 @@ class QS:
 
 
     
-    def train(self, max_iter, batch_size, seed, tol=1e-6, **kwargs):
+    def train(self, max_iter, batch_size, seed, tol=config.tol, **kwargs):
         """
         Train the wave function parameters.
         Here you should calculate sampler statistics and update the wave function parameters based on the derivative of the (statistical) local energy.
@@ -322,16 +322,9 @@ class QS:
                 )
                 pbar.update(1)
 
-                """
-                # Update the alpha in the Parameter instance
-                old_alpha = self.alg.params.get("alpha")
-                diff_alpha = np.abs(old_alpha - self.alpha)
-                if diff_alpha < tol:
-                    print(f"Converged after {iteration} iterations")
-                    break
-                    
+              
+                
 
-                """
                 a_values.append(self.a.flatten())
                 b_values.append(self.b.flatten())
                 W_values.append(self.W.flatten())
@@ -340,6 +333,18 @@ class QS:
                 self.alg.params.set("a", self.a)
                 self.alg.params.set("b", self.b)
                 self.alg.params.set("W", self.W)
+
+
+
+                max1 = np.max(np.abs(G_a))
+                max2 = np.max(np.abs(G_b))
+                max3 = np.max(np.abs(G_W))
+
+                maxgrad = max(max1, max2, max3)
+                if maxgrad<tol:
+                    print(f"Converged after {iteration} iterations")
+                    break
+                    
 
                 
         self.sampler._log = (
