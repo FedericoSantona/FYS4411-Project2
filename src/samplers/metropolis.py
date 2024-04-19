@@ -40,31 +40,48 @@ class Metropolis(Sampler):
         rng = self._rng(next_gen)
         # Generate a proposal move
 
-        proposed_positions = rng.normal(loc=initial_positions , scale=self.scale)
-
-        # Calculate log probability densities for current and proposed positions
-        prob_current = wf_squared(initial_positions)
-        prob_proposed = wf_squared(proposed_positions)
-        # Calculate acceptance probability in log domain
-        log_accept_prob = prob_proposed - prob_current
-
-        # Decide on acceptance
-        accept = rng.random() < np.exp(
-            log_accept_prob
-        )
+        proposed_positions_tot = rng.normal(loc=initial_positions , scale=self.scale)
 
         
-        
-        #breakpoint()
-        new_positions, new_logp, n_accepted = self.accept_func(
-            n_accepted=state.n_accepted,
-            accept=accept,
-            initial_positions=initial_positions,
-            proposed_positions=proposed_positions,
-            log_psi_current=prob_current,
-            log_psi_proposed=prob_proposed,
-        )
 
+        
+        for i in range(self._N):
+            
+            proposed_positions = initial_positions.copy()
+           
+            proposed_positions = jnp.where(i == jnp.arange(proposed_positions.shape[0])[:, None], proposed_positions_tot[i, :], proposed_positions)
+
+
+
+            # Calculate log probability densities for current and proposed positions
+            prob_current = wf_squared(initial_positions)
+            prob_proposed = wf_squared(proposed_positions)
+            # Calculate acceptance probability in log domain
+            log_accept_prob = prob_proposed - prob_current
+
+            # Decide on acceptance
+            accept = np.full(self._N, False, dtype=bool)
+            accept[i] = rng.random() < np.exp(
+                log_accept_prob
+            )
+
+            
+            #breakpoint()
+            new_positions, new_logp, n_accepted = self.accept_func(
+                n_accepted=state.n_accepted,
+                accept=accept,
+                initial_positions=initial_positions,
+                proposed_positions=proposed_positions,
+                log_psi_current=prob_current,
+                log_psi_proposed=prob_proposed,
+            )
+            init = initial_positions
+            
+            if accept[i]:
+                initial_positions = proposed_positions
+
+            
+        new_positions = initial_positions
         # Create new state by updating state variables.
         state.logp = new_logp
         state.delta += 1
@@ -81,6 +98,8 @@ class Metropolis(Sampler):
         log_psi_current,
         log_psi_proposed,
     ):
+        
+        accept = accept.reshape(-1, 1)
         # accept is a boolean array, so you can use it to index directly
         new_positions = np.where(accept, proposed_positions, initial_positions)
         new_logp = np.where(accept, log_psi_proposed, log_psi_current)
