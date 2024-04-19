@@ -222,7 +222,7 @@ class VMC:
         return grad
 
 
-    def grad_wf_closure_jax(self, r, alpha):
+    def grad_wf_closure_jax(self, r, a,b,W):
         """
         computes the gradient of the wavefunction with respect to r, but with jax grad
         """
@@ -230,7 +230,7 @@ class VMC:
         # Now we use jax.grad to compute the gradient with respect to the first argument (r)
         # Note: jax.grad expects a scalar output, so we sum over the particles to get a single value.
         grad_log_psi = jax.grad(
-            lambda positions: jnp.sum(self.wf_closure(positions, alpha)), argnums=0
+            lambda positions: jnp.sum(self.wf_closure(positions, a,b,W)), argnums=0
         )
 
         return grad_log_psi(r)
@@ -271,24 +271,19 @@ class VMC:
         grad_W  = (r_flat[:,:,None] * grad_b[:,None,:]).reshape(self.batch_size , self._M * self._n_hidden)
         
 
+        breakpoint()
         return grad_a , grad_b , grad_W
 
-    def grads_closure_jax(self, r, alpha):
+    def grads_closure_jax(self, r, a, b, W):
         """
         Computes the gradient of the wavefunction with respect to the variational parameters with JAX grad using Vmap.
         """
 
-        # Define the gradient function for a single instance
-        def single_grad(pos, var):
-            return jax.grad(lambda a: jnp.sum(self.wf_closure_train(pos, a)))(var)
+        grad_a = jax.vmap(jax.grad(self.wf_closure,1),(0,None,None,None),0)(r,a,b,W)
+        grad_b = jax.vmap(jax.grad(self.wf_closure,2),(0,None,None,None),0)(r,a,b,W)
+        grad_W = jax.vmap(jax.grad(self.wf_closure,3),(0,None,None,None),0)(r,a,b,W).reshape(self.batch_size,self._M*self._n_hidden)
 
-        # Vectorize the gradient computation over the batch dimension
-        batched_grad = jax.vmap(single_grad, (0, None), 0)
-
-        # Compute gradients for the entire batch
-        grad_alpha = batched_grad(r, alpha)
-
-        return self.backend.squeeze(grad_alpha)
+        return grad_a,grad_b,grad_W
 
     def laplacian(self, r):
         """
