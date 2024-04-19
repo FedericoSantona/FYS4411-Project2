@@ -2,6 +2,7 @@ import jax.numpy as jnp
 import numpy as np
 from jax import jit, ops
 from jax import lax
+import jax
 import jax.random as random
 from qs.utils import State
 from qs.utils import advance_PRNG_state
@@ -31,7 +32,10 @@ class Metropolis(Sampler):
         self._seed = seed
         self._N = n_particles
         self._dim = dim
+        
         super().__init__(alg_inst, hamiltonian, log, rng, scale, logger, backend)
+
+    
 
     def step(self, wf_squared, state, seed):
         """One step of the random walk Metropolis algorithm."""
@@ -42,17 +46,21 @@ class Metropolis(Sampler):
 
         proposed_positions_tot = rng.normal(loc=initial_positions , scale=self.scale)
 
-        
+        initial_positions = np.array(initial_positions)
+        proposed_positions_tot = np.array(proposed_positions_tot)
 
         
         for i in range(self._N):
             
             proposed_positions = initial_positions.copy()
-           
-            proposed_positions = jnp.where(i == jnp.arange(proposed_positions.shape[0])[:, None], proposed_positions_tot[i, :], proposed_positions)
+            
 
 
+            #proposed_positions = jnp.where(i == jnp.arange(proposed_positions.shape[0])[:, None], proposed_positions_tot[i, :], proposed_positions)
+            
+            proposed_positions[i , :] = proposed_positions_tot[i , :]
 
+            prop = proposed_positions
             # Calculate log probability densities for current and proposed positions
             prob_current = wf_squared(initial_positions)
             prob_proposed = wf_squared(proposed_positions)
@@ -78,15 +86,17 @@ class Metropolis(Sampler):
             init = initial_positions
             
             if accept[i]:
-                initial_positions = proposed_positions
+                initial_positions = new_positions
+
+            #breakpoint()
 
             
-        new_positions = initial_positions
+        new_positions_tot = initial_positions
         # Create new state by updating state variables.
         state.logp = new_logp
         state.delta += 1
         state.n_accepted = n_accepted
-        state.positions = new_positions
+        state.positions = new_positions_tot
         state.r_dist = new_positions[None, ...] - new_positions[:, None, :]
 
     def accept_func(

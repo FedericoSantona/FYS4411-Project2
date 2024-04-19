@@ -67,48 +67,68 @@ class MetropolisHastings(Sampler):
         rng = self._rng(next_gen)
         # Generate a proposal move
         eta = rng.normal(loc=0, scale=1, size=(self._N , self._dim))
-        proposed_positions = (
+        proposed_positions_tot = (
             initial_positions
             + self.diffusion_coeff * quantum_force_init * self.time_step
             + eta * (self.backend.sqrt(self.time_step))
         )
 
-        
-       # print("proposed_positions", proposed_positions)
-        # Calculate wave function squared for current and proposed positions
-        prob_current = wf_squared(initial_positions)
-        prob_proposed = wf_squared(proposed_positions)
+        initial_positions = np.array(initial_positions)
+        proposed_positions_tot = np.array(proposed_positions_tot)
 
-        # Calculate the q - value
-        q_value, proposed_positions = self.importance_sampling_interior(
-            initial_positions,
-            proposed_positions,
-            quantum_force_init,
-            prob_current,
-            prob_proposed,
-            self.diffusion_coeff,
-            self.time_step,
-        )
+        for i in range(self._N):
+            
+            proposed_positions = initial_positions.copy()
 
-        # Decide on acceptance
-        accept = rng.random() < self.backend.exp(q_value)
-        accept = accept.reshape(-1, 1)
+            #proposed_positions = jnp.where(i == jnp.arange(proposed_positions.shape[0])[:, None], proposed_positions_tot[i, :], proposed_positions)
+            
+            proposed_positions[i , :] = proposed_positions_tot[i , :]
 
-        #print("accept", accept)
-        # Update positions based on acceptance
-        new_positions, new_logp, n_accepted = self.accept_func(
-            n_accepted=state.n_accepted,
-            accept=accept,
-            initial_positions=initial_positions,
-            proposed_positions=proposed_positions,
-            log_psi_current=prob_current,
-            log_psi_proposed=prob_proposed,
-        )
+            # print("proposed_positions", proposed_positions)
+            # Calculate wave function squared for current and proposed positions
+            prob_current = wf_squared(initial_positions)
+            prob_proposed = wf_squared(proposed_positions)
+
+            # Calculate the q - value
+            q_value, proposed_positions = self.importance_sampling_interior(
+                initial_positions,
+                proposed_positions,
+                quantum_force_init,
+                prob_current,
+                prob_proposed,
+                self.diffusion_coeff,
+                self.time_step,
+            )
+
+            # Decide on acceptance
+            accept = np.full(self._N, False, dtype=bool)
+            accept[i] = rng.random() < self.backend.exp(q_value)
+            accept = accept.reshape(-1, 1)
+
+            #print("accept", accept)
+            # Update positions based on acceptance
+            new_positions, new_logp, n_accepted = self.accept_func(
+                n_accepted=state.n_accepted,
+                accept=accept,
+                initial_positions=initial_positions,
+                proposed_positions=proposed_positions,
+                log_psi_current=prob_current,
+                log_psi_proposed=prob_proposed,
+            )
+            #ini = initial_positions
+            if accept[i]:
+                initial_positions = new_positions
+
+            
+
+
+
         # Create new state by updating state variables.
+        new_positions_tot = initial_positions
         state.logp = new_logp
         state.n_accepted = n_accepted
         state.delta += 1
-        state.positions = new_positions
+        state.positions = new_positions_tot
         state.r_dist = new_positions[None, ...] - new_positions[:, None, :]
 
     def importance_sampling_interior(
