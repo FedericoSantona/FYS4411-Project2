@@ -208,15 +208,6 @@ class VMC:
 
         second_term = 0.5 * self.backend.sum(W / exp_term , axis = 1)
 
-        """
-        second_term1 = []
-        for m in range(self._M):
-            second_term1.append([])
-            for n in range(self._n_hidden):
-                second_term1[-1].append(W[m,n] / exp_term[n])
-        second_term1 = 0.5*np.sum(np.array(second_term1), axis = 1)
-        """
-
         grad = -first_term + second_term
 
         return grad
@@ -233,7 +224,7 @@ class VMC:
             lambda positions: jnp.sum(self.wf_closure(positions, a,b,W)), argnums=0
         )
 
-        return grad_log_psi(r)
+        return grad_log_psi(r).reshape(-1)
 
 
 
@@ -271,7 +262,7 @@ class VMC:
         grad_W  = (r_flat[:,:,None] * grad_b[:,None,:]).reshape(self.batch_size , self._M * self._n_hidden)
         
 
-        breakpoint()
+        
         return grad_a , grad_b , grad_W
 
     def grads_closure_jax(self, r, a, b, W):
@@ -316,7 +307,7 @@ class VMC:
         return laplacian
 
     
-    def laplacian_closure_jax(self, r, alpha):
+    def laplacian_closure_jax(self, r, a , b , W):
         """
         Computes the Laplacian of the wavefunction for each particle using JAX automatic differentiation.
         r: Position array of shape (n_particles, n_dimensions)
@@ -324,16 +315,18 @@ class VMC:
         """
         # Compute the Hessian (second derivative matrix) of the wavefunction
         hessian_psi = jax.hessian(
-            self.wf, argnums=0
+           lambda positions:  self.wf_closure(positions ,a ,b ,W), argnums=0
         )  # The hessian matrix for our wavefunction
-        d = self._dim
+        
+        first_term = jnp.diag(
+            hessian_psi(r).reshape(self._dim*self._N , self._dim*self._N)
+        ) # The hessian is nested like a ... onion
 
-        r = r.reshape(1, d)
-        first_term = jnp.trace(
-            hessian_psi(r)[0].reshape(d, d)
-        )  # The hessian is nested like a ... onion
-        second_term = jnp.sum(self.grad_wf_closure(r, alpha) ** 2)
-        laplacian = first_term + second_term
+        second_term = (self.grad_wf_closure(r, a , b , W))**2
+        
+        laplacian = (first_term + second_term)
+
+        
 
         return laplacian
 
