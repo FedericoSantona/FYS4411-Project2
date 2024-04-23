@@ -2,17 +2,55 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 
+
+
+print("\n--------------------------------")
+print("This file tests the implimentation of the gradient of the wavefunction w.r.t the variational parameters,")
+print("both the Jax and numpy implimentationas are compared, also Morten's implimentation is compared to our numpy implimentation.\n")
+print("The last test checks if our actual implimented WF matches with Morten's for a given tolerance.")
+print("--------------------------------\n\n\n")
+
 tol = 10E-6
+tol2 = 10E-8
 Np = 2
 d = 2
 nhidden = 10
 M =Np*d
-nbatch = 200
-r = np.random.normal(0,0.1,size = (nbatch,Np , d))
+nbatch = 1
+r = np.random.normal(0,1,size = (nbatch,Np , d))
 a =  np.random.normal(0,0.1,size = M )
 b =  np.random.normal(0,0.1,size = nhidden )
 W =  np.random.normal(0,0.1,size = (M , nhidden) )
 
+# Here we test the diff between the gradient of the wavefunction w.r.t the variational
+#parameters, our numerical and analytical implimentations are compared to Morten's analytical for the 
+#2 particle, 2 dim case.
+
+
+def Qfac(r,b,w):
+        Q = np.zeros((nhidden), np.double)
+        temp = np.zeros((nhidden), np.double)
+        for ih in range(nhidden):
+                temp[ih] = (r*w[:,:,ih]).sum()
+        Q = b + temp
+        return Q
+
+#Morten's derivative, changed with a factor of 2 as to match our expressions
+def DerivativeWFansatz(r,a,b,w):
+        sigma=1.0
+        sig2 = sigma**2
+        Q = Qfac(r,b,w)
+        WfDer = np.empty((3,),dtype=object)
+        WfDer = [np.copy(a),np.copy(b),np.copy(w)]
+        WfDer[0] = (r-a)/(2*sig2)
+        WfDer[1] = 1 / (2*(1 + np.exp(-Q)))
+        for ih in range(nhidden):
+                WfDer[2][:,:,ih] = r[:,:] / (2*sig2*(1+np.exp(-Q[ih])))
+
+        return WfDer[0], WfDer[1], WfDer[2]
+
+
+Mgrad_a,Mgrad_b,Mgrad_W = DerivativeWFansatz(r,a.reshape(Np,d),b,W.reshape(Np,d,nhidden))
 
 def grads_closure(r, a, b, W):
         """
@@ -44,6 +82,7 @@ Ngrad_a, Ngrad_b, Ngrad_W = grads_closure(r,a,b,W)
 
 
 
+
 def wf_closure(r, a, b, W):
         """
 
@@ -69,31 +108,52 @@ def wf_closure(r, a, b, W):
         
         return wf
 
+
+#Here we have the jax implimentation
 grad_a = jax.vmap(jax.grad(wf_closure,1),(0,None,None,None),0)(r,a,b,W)
 grad_b = jax.vmap(jax.grad(wf_closure,2),(0,None,None,None),0)(r,a,b,W)
 grad_W = jax.vmap(jax.grad(wf_closure,3),(0,None,None,None),0)(r,a,b,W).reshape(nbatch,M*nhidden)
 
-#print(jnp.sum(grad_a-Ngrad_a))
-#print(jnp.sum(grad_b-Ngrad_b))
-#breakpoint()
 
-grad_diff = grad_W-Ngrad_W
-print("----- Gradient of WF test -----")
-if np.abs(np.max(grad_diff)) > tol:
-        raise ValueError(" The numerical gradient of the WF is not equal the analytical!\n")
+# First we test for a
+grad_diff_a = grad_a-Ngrad_a
+print("----- TEST 1: Gradient of WF w.r.t a -----")
+if np.abs(np.max(grad_diff_a)) > tol or np.sum(Ngrad_a-Mgrad_a.reshape(nbatch,d*Np))>tol:
+        raise ValueError(" The numerical gradient of the WF w.r.t a is not equal the analytical!\n")
 else: 
-        print("The numerical gradient of the WF is correct\n") #Given that the analytical is correct....
+        print("Jax-Numpy equivalence: Pass\nNumpy-Morten equivalence: Pass\n") 
 
-print("The largest difference between numerical and analytical gradient of Wf is ", np.max(grad_W-Ngrad_W))
+print("The largest difference between numerical and analytical gradient of Wf w.r.t a is ", np.max(grad_a-Ngrad_a))
 
-def Qfac(r,b,w):
-        Q = np.zeros((nhidden), np.double)
-        temp = np.zeros((nhidden), np.double)
-        for ih in range(nhidden):
-                temp[ih] = (r*w[:,:,ih]).sum()
-        Q = b + temp
-        return Q
+#Then we test for b
+grad_diff_b = grad_b-Ngrad_b
 
+print("\n")
+print("----- TEST 2: Gradient of WF w.r.t b -----")
+
+
+if np.abs(np.max(grad_diff_b)) > tol or np.abs(Mgrad_b.sum()-Ngrad_b.sum())>tol: 
+        raise ValueError(" The numerical gradient of the WF w.r.t b is not equal the analytical!\n")
+else: 
+        print("Jax-Numpy equivalence: Pass\nNumpy-Morten equivalence: Pass\n") 
+
+print("The largest difference between numerical and analytical gradient of Wf w.r.t b is ", np.max(grad_b-Ngrad_b))
+
+print("\n")
+
+#Then we test for W
+grad_diff_W = grad_W-Ngrad_W
+print("----- TEST 3: Gradient of WF w.r.t W -----")
+if np.abs(np.max(grad_diff_W)) > tol or np.abs( Mgrad_W.sum()-Ngrad_W.sum())>tol:
+        raise ValueError(" The numerical gradient of the WF w.r.t W is not equal the analytical!\n")
+
+else: 
+        print("Jax-Numpy equivalence: Pass\nNumpy-Morten equivalence: Pass\n") 
+
+print("The largest difference between numerical and analytical gradient of Wf w.r.t W is ", np.max(grad_W-Ngrad_W))
+
+
+print("\n")
 def wf_closure(r, a, b, W):
         """
 
@@ -147,6 +207,9 @@ print("\n----- WF Test -----")
 if wfdiff > tol:
         raise ValueError("Wf is wrong\n")
 else: 
-        print("WF is correct!\n")
+        print("Implimented WF - Morten's WF equivalence test: Pass\n")
 
 print("Wfdiff ", np.log(WaveFunction(r,a.reshape(Np,d),b,W.reshape(Np,d,nhidden)))-2*wf_closure(r,a,b,W) )
+
+
+# Next we test gradients of wavefunction w.r.t 
