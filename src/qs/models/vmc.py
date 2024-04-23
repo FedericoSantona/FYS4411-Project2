@@ -260,7 +260,7 @@ class VMC:
         #grad_W is of shape (n_batch ,  M * N_hidden )
         
         grad_W  = (r_flat[:,:,None] * grad_b[:,None,:]).reshape(self.batch_size , self._M * self._n_hidden)
-        breakpoint()
+        #breakpoint()
 
         
         return grad_a , grad_b , grad_W
