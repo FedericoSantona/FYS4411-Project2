@@ -95,11 +95,12 @@ def laplacian_closure( r, a , b , W):
 
         term = num/den
 
-        laplacian = -0.5 +0.5*jnp.sum(W**2 * term, axis = 1)
+        second_term = -0.5 +0.5*jnp.sum(W**2 * term, axis = 1)
+        first_term = grad_wf_closure(r, a, b, W)**2
 
         
 
-        return laplacian
+        return second_term+first_term
 
 def laplacian_closure_jax( r, a , b , W):
         """
@@ -137,7 +138,8 @@ laplacian = laplacian_closure( r, a,b,W)
 grad = grad_wf_closure( r, a,b,W)
 grad_jax = grad_wf_closure_jax( r, a,b,W)
 
+print("laplacian ", laplacian)
+print("laplacian_jax ", laplacian_jax)
+print("laplacian_diff ",  laplacian_jax - laplacian)
 
-print("laplacian" ,  laplacian_jax - laplacian)
-
-print("grad" , grad_jax - grad)
+print("grad_diff" , grad_jax - grad)

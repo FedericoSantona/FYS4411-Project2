@@ -297,14 +297,15 @@ class VMC:
         """
         r_flat = r.flatten()
         
-        num = self.backend.exp(b+self.backend.sum(r_flat[:, None]*W , axis = 0))
-        den = (1+self.backend.exp(b+self.backend.sum(r_flat[:, None]*W , axis = 0)))**2
+        num = self.backend.exp(b+self.backend.sum(r_flat[:, None]*W , axis = 1))
+        den = (1+num)**2
 
         term = num/den
 
-        laplacian = -0.5 +0.5*self.backend.sum(W**2 * term, axis = 1)
+        first_term = self.grad_wf(r)**2
+        second_term = -0.5 +0.5*self.backend.sum(W**2 * term, axis = 1)
 
-        return laplacian
+        return first_term+second_term
 
     
     def laplacian_closure_jax(self, r, a , b , W):

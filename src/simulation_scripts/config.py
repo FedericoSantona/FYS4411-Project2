@@ -13,7 +13,7 @@ nchains = 4# number of Markov chains
 mcmc_alg = "mh" # eiteer "mh" or "m"
 backend = "jax" # or "numpy" but jax should go faster because of the jit
 
-eta = 0.1
+eta = 1e-1
 tol = 1e-8  #tolerance for the size of the gradient
 training_cycles = 1000 # this is cycles for the ansatz
 optimizer = "adam"
