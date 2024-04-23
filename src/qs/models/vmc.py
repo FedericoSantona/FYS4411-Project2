@@ -260,7 +260,7 @@ class VMC:
         #grad_W is of shape (n_batch ,  M * N_hidden )
         
         grad_W  = (r_flat[:,:,None] * grad_b[:,None,:]).reshape(self.batch_size , self._M * self._n_hidden)
-        
+        breakpoint()
 
         
         return grad_a , grad_b , grad_W
@@ -297,7 +297,7 @@ class VMC:
         """
         r_flat = r.flatten()
         
-        num = self.backend.exp(b+self.backend.sum(r_flat[:, None]*W , axis = 1))
+        num = self.backend.exp(b+self.backend.sum(r_flat[:, None]*W , axis = 0))
         den = (1+num)**2
 
         term = num/den
