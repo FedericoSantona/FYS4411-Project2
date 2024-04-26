@@ -2,22 +2,27 @@
 output_filename = "../data/vmc_playground.csv"
 import numpy as np
 
-nparticles = 5
-dim = 3
-n_hidden = 10
-init_scale = 1 / np.sqrt(nparticles * dim * n_hidden) * 0.01
+nparticles = 2
+dim = 2
+n_hidden = 2
+init_scale =  0.1
 
-nsamples =  int(2**12) #  2**18 = 262144
+
+omega = 1 #Ho frequency
+
+WF_scale = 1 # This is the decider between using psi =sqrt(F) [2] or psi = F [1] 
+
+nsamples =  int(2**16) #  2**18 = 262144
 scale = 1+ (dim-1)*0.1
 nchains = 4# number of Markov chains
-mcmc_alg = "mh" # eiteer "mh" or "m"
-backend = "jax" # or "numpy" but jax should go faster because of the jit
+mcmc_alg = "m" # eiteer "mh" or "m"
+backend = "numpy" # or "numpy" but jax should go faster because of the jit
 
-eta = 1e-1
+eta = 1e-3
 tol = 1e-8  #tolerance for the size of the gradient
 training_cycles = 1000 # this is cycles for the ansatz
-optimizer = "adam"
-batch_size = 400
+optimizer = "gd"
+batch_size = 800
 
 
 hamiltonian = "ho" # either ho or eo 
