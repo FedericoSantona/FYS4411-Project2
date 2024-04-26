@@ -3,6 +3,7 @@ import jax.numpy as jnp
 from jax import jit
 import numpy as np
 from qs.models.vmc import VMC
+from qs.utils import Parameter
 from simulation_scripts import config
 jax.config.update("jax_enable_x64", True)
 jax.config.update("jax_platform_name", "cpu")
@@ -84,14 +85,14 @@ class HarmonicOscillator(Hamiltonian):
     
 
     def non_int_energy(self, r):
-
-        #first_term = self.alg_int.grad_wf(r)**2
-        second_term = self.alg_int.laplacian(r)
-        third_term = (r**2).flatten()
+        omega = config.omega
+        
+        kinetic_energy = self.alg_int.laplacian(r)
+        potential_energy = omega**2*(r**2).flatten()
 
         #The sum without specific axis is the sum of all elements in the array i.e. returns a scalar
-        non_int_energy =  0.5*self.backend.sum(-second_term + third_term) 
-
+        non_int_energy =  0.5*self.backend.sum(-kinetic_energy + potential_energy) 
+        #print(non_int_energy)
         return non_int_energy
 
 

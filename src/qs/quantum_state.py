@@ -234,16 +234,17 @@ class QS:
 
 
     def loc_energy_grad(self, grads, local_energies):
-
+        
         first_term = self.backend.mean(grads
                                        * local_energies.reshape(self._training_batch , 1)   , axis=0 )
         second_term = self.backend.mean(grads , axis = 0 ) * self.backend.mean(
             local_energies
         )
-        grads  = 2 * (first_term - second_term)
+        grads1  = 2 * (first_term - second_term)
 
+        
 
-        return grads
+        return grads1
 
 
     
@@ -298,16 +299,16 @@ class QS:
                 G_a = self.loc_energy_grad(grads_a, local_energies)
                 G_b = self.loc_energy_grad(grads_b, local_energies)
                 G_W = self.loc_energy_grad(grads_W, local_energies)
-
+                
                 G_W = G_W.reshape(self._M, self._h_number )
 
                 cycles.append(iteration)
-                
+                #print(self.a)
                 # Ensure alpha and its gradient are iterables
+                #breakpoint( )
                 self.a = self.backend.array(
                     self._optimizer.step([self.a], [G_a] , ite=iteration)
                 )[0]
-
                 self.b = self.backend.array(
                     self._optimizer.step([self.b], [G_b] , ite=iteration)
                 )[0]
@@ -316,7 +317,7 @@ class QS:
                     self._optimizer.step([self.W], [G_W] , ite=iteration)
                 )[0]
 
-                # Update the progressbar to show the current alpha value
+                # Update the progressbar to show the current energy value
                 pbar.set_description(
                     rf"[Training progress] , Energy : {self.backend.mean(local_energies):.4f}"
                 )
@@ -329,11 +330,12 @@ class QS:
                 b_values.append(self.b.flatten())
                 W_values.append(self.W.flatten())
                 energies.append(self.backend.mean(local_energies))
-
+                #breakpoint()
+                
                 self.alg.params.set("a", self.a)
                 self.alg.params.set("b", self.b)
                 self.alg.params.set("W", self.W)
-
+                
 
 
                 max1 = np.max(np.abs(G_a))

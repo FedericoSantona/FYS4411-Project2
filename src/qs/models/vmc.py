@@ -147,7 +147,7 @@ class VMC:
         
         wf = -first_sum + second_sum
         
-        return wf
+        return (3-config.WF_scale)*wf #The coeff decides between the two methods of defining psi
 
     def prob(self, r):
         """
@@ -160,6 +160,7 @@ class VMC:
         b = self.params.get("b")
         W = self.params.get("W")
           
+        
         return self.prob_closure(r, a , b, W)
     
     def prob_closure(self, r, a , b, W):
@@ -202,15 +203,15 @@ class VMC:
         """
         r_flat = r.flatten()
 
-        first_term = 0.5 * (r_flat - a )
+        first_term =  (r_flat - a )
 
         exp_term =   1+self.backend.exp(-(b+self.backend.sum(r_flat[:, None]*W , axis = 0)))
 
-        second_term = 0.5 * self.backend.sum(W / exp_term , axis = 1)
+        second_term =  self.backend.sum(W / exp_term , axis = 1)
 
         grad = -first_term + second_term
 
-        return grad
+        return grad/config.WF_scale
 
 
     def grad_wf_closure_jax(self, r, a,b,W):
@@ -251,19 +252,19 @@ class VMC:
 
 
         #grad_a is of shape (N_batch , M)
-        grad_a = (0.5 * (r_flat - a))
+        grad_a = ( (r_flat - a))
 
 
         # grad_b is of shape (n_batch , n_hidden)
-        grad_b = 1 / (2*( 1+self.backend.exp(-(b+self.backend.sum(r_flat[:,: ,None]*W[None,:,:] , axis = 1)))))
+        grad_b = 1 / (( 1+self.backend.exp(-(b+self.backend.sum(r_flat[:,: ,None]*W[None,:,:] , axis = 1)))))
 
         #grad_W is of shape (n_batch ,  M * N_hidden )
         
         grad_W  = (r_flat[:,:,None] * grad_b[:,None,:]).reshape(self.batch_size , self._M * self._n_hidden)
-        #breakpoint()
+        
 
         
-        return grad_a , grad_b , grad_W
+        return grad_a/config.WF_scale , grad_b/config.WF_scale , grad_W/config.WF_scale
 
     def grads_closure_jax(self, r, a, b, W):
         """
@@ -286,6 +287,7 @@ class VMC:
         a = self.params.get("a")  
         b = self.params.get("b")
         W = self.params.get("W")  
+        
 
         return self.laplacian_closure(r, a , b , W)
 
@@ -303,9 +305,9 @@ class VMC:
         term = num/den
 
         first_term = self.grad_wf(r)**2
-        second_term = -0.5 +0.5*self.backend.sum(W**2 * term, axis = 1)
+        second_term = -1 +self.backend.sum(W**2 * term, axis = 1)
 
-        return first_term+second_term
+        return first_term+second_term/config.WF_scale
 
     
     def laplacian_closure_jax(self, r, a , b , W):

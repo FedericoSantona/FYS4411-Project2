@@ -12,6 +12,7 @@ from tqdm.auto import tqdm  # progress bar
 import config
 
 
+
 jax.config.update("jax_enable_x64", True)
 jax.config.update("jax_platform_name", "cpu")
 
