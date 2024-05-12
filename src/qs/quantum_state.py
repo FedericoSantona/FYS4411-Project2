@@ -20,14 +20,17 @@ jax.config.update("jax_platform_name", "cpu")
 import numpy as np
 import pandas as pd
 from simulation_scripts import config
-from qs.models import VMC
+from qs.models.vmc import VMC
+from qs.models.vmc_fermions import VMC_fermions
 
 from numpy.random import default_rng
 from tqdm.auto import tqdm
 
 from physics.hamiltonians import HarmonicOscillator as HO
 from samplers.metropolis import Metropolis as Metro
+from samplers.metro_fermions import Metropolis_fermions as MetroFermions
 from samplers.metro_hastings import MetropolisHastings as MetroHastings
+from samplers.metro_hast_fermions import MetropolisHastings_fermions as MetroHastingsFermions
 
 from optimizers.gd import Gd as gd_opt
 from optimizers.gd import Adam as adam_opt
@@ -118,20 +121,37 @@ class QS:
         self._M = self._N * self._dim
         self._wf_type = wf_type
 
-    
-        # Initialize the VMC class object
-        self.alg = VMC(
-            self._N,
-            self._dim,
-            self._h_number,
-            rng=self.rng,
-            log=self._log,
-            logger=self.logger,
-            seed=self._seed,
-            logger_level=self.logger_level,
-            backend=self._backend,
-            radius=self.radius,
-        )
+        if config.particle_type == "bosons":
+            # Initialize the VMC class object
+            self.alg = VMC(
+                self._N,
+                self._dim,
+                self._h_number,
+                rng=self.rng,
+                log=self._log,
+                logger=self.logger,
+                seed=self._seed,
+                logger_level=self.logger_level,
+                backend=self._backend,
+                radius=self.radius,
+            )
+        elif config.particle_type == "fermions":
+            # Initialize the VMC class object
+            self.alg = VMC_fermions(
+                self._N,
+                self._dim,
+                self._h_number,
+                rng=self.rng,
+                log=self._log,
+                logger=self.logger,
+                seed=self._seed,
+                logger_level=self.logger_level,
+                backend=self._backend,
+                radius=self.radius,
+            )
+        else:
+            raise ValueError("Invalid particle type, should be 'bosons' or 'fermions'")
+        
         # Initialize the parameters for the VMC class wavefunction, and set the alpha parameter from config.py
         self.alg._initialize_vars(
             self._N, self._dim, self._log, self.logger, self.logger_level
@@ -184,37 +204,69 @@ class QS:
 
         if self.mcmc_alg == "m":
             print("The chosen MCMC algorithm is the Metropolis algorithm")
-            self.sampler = Metro(
-                vmc_instance,
-                hami,
-                self.rng,
-                self._scale,
-                self._N,
-                self._dim,
-                self._seed,
-                self._log,
-                self.logger,
-                self.logger_level,
-                self._backend,
-            )
+            if config.particle_type == "bosons":
+                self.sampler = Metro(
+                    vmc_instance,
+                    hami,
+                    self.rng,
+                    self._scale,
+                    self._N,
+                    self._dim,
+                    self._seed,
+                    self._log,
+                    self.logger,
+                    self.logger_level,
+                    self._backend,
+                )
+            elif config.particle_type == "fermions":
+                self.sampler = MetroFermions(
+                    vmc_instance,
+                    hami,
+                    self.rng,
+                    self._scale,
+                    self._N,
+                    self._dim,
+                    self._seed,
+                    self._log,
+                    self.logger,
+                    self.logger_level,
+                    self._backend,
+                )
 
         elif self.mcmc_alg == "mh":
             print("The chosen MCMC algorithm is the Metropolis-Hastings algorithm")
-            self.sampler = MetroHastings(
-                vmc_instance,
-                hami,
-                self.rng,
-                self._scale,
-                self._N,
-                self._dim,
-                self._seed,
-                self._log,
-                self.logger,
-                self.logger_level,
-                self._backend,
-                self.time_step,
-                self.diffusion_coeff,
-            )
+            if config.particle_type == "bosons":
+                self.sampler = MetroHastings(
+                    vmc_instance,
+                    hami,
+                    self.rng,
+                    self._scale,
+                    self._N,
+                    self._dim,
+                    self._seed,
+                    self._log,
+                    self.logger,
+                    self.logger_level,
+                    self._backend,
+                    self.time_step,
+                    self.diffusion_coeff,
+                )
+            elif config.particle_type == "fermions":
+                self.sampler = MetroHastingsFermions(
+                    vmc_instance,
+                    hami,
+                    self.rng,
+                    self._scale,
+                    self._N,
+                    self._dim,
+                    self._seed,
+                    self._log,
+                    self.logger,
+                    self.logger_level,
+                    self._backend,
+                    self.time_step,
+                    self.diffusion_coeff,
+                )
         else:
             raise ValueError("Invalid MCMC algorithm type, should be 'm' or 'mh'")
         # check metropolis sampler script

@@ -10,7 +10,7 @@ from qs.models.vmc import VMC
 from qs.utils.parameter import Parameter
 
 
-class MetropolisHastings(Sampler):
+class MetropolisHastings_fermions(Sampler):
     def __init__(
         self,
         alg_inst,
@@ -75,7 +75,6 @@ class MetropolisHastings(Sampler):
 
         initial_positions = np.array(initial_positions)
         proposed_positions_tot = np.array(proposed_positions_tot)
-
         n_accepted = state.n_accepted
 
         for i in range(self._N):
@@ -104,12 +103,12 @@ class MetropolisHastings(Sampler):
 
             # Decide on acceptance
             accept = np.full(self._N, False, dtype=bool)
-            accept[i] = rng.random() < self.backend.exp(q_value)
+            accept[i] = rng.random() < (q_value)
             accept = accept.reshape(-1, 1)
 
             #print("accept", accept)
             # Update positions based on acceptance
-            new_positions, new_logp  = self.accept_func(
+            new_positions, new_logp = self.accept_func(
                 accept=accept,
                 initial_positions=initial_positions,
                 proposed_positions=proposed_positions,
@@ -120,6 +119,8 @@ class MetropolisHastings(Sampler):
             if accept[i]:
                 initial_positions = new_positions
                 n_accepted += 1
+                #print("accettata")
+                #print(n_accepted)
 
             
 
@@ -154,11 +155,11 @@ class MetropolisHastings(Sampler):
 
 
        #Now here should I sum along dimensions or sum it all? I think sum it all
-        Gfunc_init = -self.backend.sum(v_init**2) / (D * dt * 4)
-        Gfunc_proposed = -self.backend.sum(v_proposed**2) / (D * dt * 4)
+        Gfunc_init = self.backend.exp(-self.backend.sum(v_init**2) / (D * dt * 4))
+        Gfunc_proposed = self.backend.exp(-self.backend.sum(v_proposed**2) / (D * dt * 4))
 
        
-        q_value = Gfunc_proposed - Gfunc_init + prob_proposed - prob_init
+        q_value = ( Gfunc_proposed  * prob_proposed) / (prob_init * Gfunc_init )
 
     
         return q_value, proposed_positions
@@ -175,5 +176,6 @@ class MetropolisHastings(Sampler):
         new_positions = np.where(accept, proposed_positions, initial_positions)
         new_logp = np.where(accept, log_psi_proposed, log_psi_current)
 
+        
 
         return new_positions, new_logp

@@ -88,10 +88,10 @@ class HarmonicOscillator(Hamiltonian):
         omega = config.omega
         
         kinetic_energy = self.alg_int.laplacian(r)
-        potential_energy = omega**2*(r**2).flatten()
+        potential_energy = self.backend.sum(omega**2*(r**2).flatten())
 
         #The sum without specific axis is the sum of all elements in the array i.e. returns a scalar
-        non_int_energy =  0.5*self.backend.sum(-kinetic_energy + potential_energy) 
+        non_int_energy =  0.5*(-kinetic_energy + potential_energy) 
         #print(non_int_energy)
         return non_int_energy
 
