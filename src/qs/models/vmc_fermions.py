@@ -97,6 +97,8 @@ class VMC_fermions:
             "grad_wf_closure",
             "laplacian_closure",
             "grads_closure",
+            "single_particle_wavefunction_closure",
+            "slater_determinant",
         ]
 
         for func in functions_to_jit:
@@ -232,7 +234,8 @@ class VMC_fermions:
         """
 
         r_flat = r.flatten()
-        first_term = self.backend.exp(- 0.25 * self.backend.sum((r_flat-a)**2) )
+        #Is 0.5 here because I am using the  psi = F
+        first_term = self.backend.exp(- 0.5 * self.backend.sum((r_flat-a)**2) )
 
         jastrow = 1+self.backend.exp(b+self.backend.sum(r_flat[:, None]*W , axis = 0))
 
@@ -246,7 +249,7 @@ class VMC_fermions:
         wf = boltzmann * slater_det
 
         
-        return  (3-config.WF_scale)*wf
+        return  wf
     
     def prob(self, r):
         """
