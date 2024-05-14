@@ -25,7 +25,7 @@ eta = 0.001
 tol = 1e-8  #tolerance for the size of the gradient
 training_cycles = 100 # this is cycles for the ansatz
 optimizer = "gd"
-batch_size = 400
+batch_size = 200
 
 
 hamiltonian = "ho" # either ho or eo 
