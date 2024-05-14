@@ -105,8 +105,8 @@ def bootstrap_plots( particle_type , nparticles):
 
 def plot_energy_vs_particles():
 
-    energies_bosons = np.loadtxt("data_analysis/energies_bosons.dat")
-    energies_fermions = np.loadtxt("data_analysis/energies_fermion.dat")
+    energies_bosons = np.loadtxt("data_analysis/bosons_energies.dat")
+    energies_fermions = np.loadtxt("data_analysis/fermion_energies.dat")
     n_particles = np.loadtxt("data_analysis/n_particles.dat")
 
 
