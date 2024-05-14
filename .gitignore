@@ -18,6 +18,8 @@ energies.dat
 energy_values.dat
 eta_values.dat
 n_hidden_values.dat
+*.dat
+*.pdf
 
 ### Python ###
 # Byte-compiled / optimized / DLL files
