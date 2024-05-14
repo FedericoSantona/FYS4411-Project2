@@ -138,13 +138,8 @@ for i in n_particles:
 energies_fermions1 = np.array(energies_fermions).squeeze() - fermions_add 
 
 
-np.savetxt("bosons_energies.dat", np.array(energy_bos))
-np.savetxt("fermion_energies.dat", np.array(energies_fermions))
+np.savetxt("bosons_energies.dat", np.array(energies_bosons))
+np.savetxt("fermion_energies.dat", np.array(energies_fermions1))
+np.savetxt("n_particles.dat", n_particles)
 
-plt.plot(n_particles, energies_fermions1, 'o-')
-plt.plot(n_particles, energies_bosons, 'o-')
-plt.xlabel("Number of particles")
-plt.ylabel("Energy")
-plt.legend(["Fermions", "Bosons"])
-plt.savefig("energy_vs_particles.pdf")
 

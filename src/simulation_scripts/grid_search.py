@@ -93,23 +93,9 @@ for i, eta in enumerate(eta_values):
         energy_values[i , j] = results.energy
 
 
-
-# Create the heatmap using seaborn
-ax = sns.heatmap(energy_values, annot=True, fmt=".2f", cmap='viridis',
-                 xticklabels=n_hidden_values, yticklabels=eta_values)
-
-# Invert the y-axis to have the (0,0) on the top left corner
-ax.invert_yaxis()
-
-plt.xlabel("Number of hidden units")
-plt.ylabel("Learning rate")
-plt.title("Energy Values Heatmap")
-
-# Save the figure
-plt.savefig("grid_search.pdf")
- # If you want to also display the heatmap
-
-
+np.savetxt("data_analysis/eta_values.dat", eta_values)
+np.savetxt("data_analysis/n_hidden_values.dat", n_hidden_values)
+np.savetxt("data_analysis/energy_values.dat", energy_values)
 
 
 
