@@ -25,31 +25,32 @@ variances_bl = []
 variances_boot = []
 variances_block = []
 
-def setup_and_train(n_bootstraps, block_size):
-    start_time = time.perf_counter()
     
-    system = quantum_state.QS(
-        backend=config.backend,
-        log=True,
-        h_number=config.n_hidden,
-        logger_level="INFO",
-        seed=config.seed,
-        radius = config.radius,
-        time_step=config.time_step,
-        diffusion_coeff=config.diffusion_coeff,
-        type_particle = config.particle_type,
-    )
     
-    # Adjust parameters based on sample_size if necessary
-    
-    # Setup and training process
-    system.set_wf(config.wf_type, config.nparticles, config.dim)
-    system.set_hamiltonian(type_=config.hamiltonian, int_type=config.interaction, omega=1.0)
-    system.set_sampler(mcmc_alg=config.mcmc_alg, scale=config.scale)
-    system.set_optimizer(optimizer=config.optimizer, eta=config.eta)
-    system.train(max_iter=config.training_cycles, batch_size=config.batch_size, seed=config.seed)
+system = quantum_state.QS(
+    backend=config.backend,
+    log=True,
+    h_number=config.n_hidden,
+    logger_level="INFO",
+    seed=config.seed,
+    radius = config.radius,
+    time_step=config.time_step,
+    diffusion_coeff=config.diffusion_coeff,
+    type_particle = config.particle_type,
+)
 
-    results, sampled_positions, local_energies = system.sample(config.nsamples, nchains=config.nchains, seed=config.seed)
+# Adjust parameters based on sample_size if necessary
+
+# Setup and training process
+system.set_wf(config.wf_type, config.nparticles, config.dim)
+system.set_hamiltonian(type_=config.hamiltonian, int_type=config.interaction, omega=1.0)
+system.set_sampler(mcmc_alg=config.mcmc_alg, scale=config.scale)
+system.set_optimizer(optimizer=config.optimizer, eta=config.eta)
+system.train(max_iter=config.training_cycles, batch_size=config.batch_size, seed=config.seed)
+
+results, sampled_positions, local_energies = system.sample(config.nsamples, nchains=config.nchains, seed=config.seed)
+
+def stat_analysis(n_bootstraps, block_size):
 
     mean_energy_boot, variance_energy_boot = system.superBoot(local_energies, n_bootstraps)
 
@@ -60,13 +61,13 @@ def setup_and_train(n_bootstraps, block_size):
 
 
 for n_bootstrap in n_boot_values:
-    variance, variance_boot , _ = setup_and_train(n_bootstrap, 1)
+    variance, variance_boot , _ = stat_analysis(n_bootstrap, 1)
     
     variances_bo.append(variance)
     variances_boot.append(variance_boot)
 
 for block_size in block_sizes:
-    variance, _ ,  block_variance = setup_and_train(1, block_size)
+    variance, _ ,  block_variance = stat_analysis(1, block_size)
     
     variances_bl.append(variance)
     variances_block.append(block_variance)
