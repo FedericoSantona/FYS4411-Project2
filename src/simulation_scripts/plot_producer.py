@@ -185,7 +185,7 @@ def position_plot(nparticles,  particle_type , nsamples):
 
 
 #training_plot(config.particle_type, config.nparticles)
-plot_energy_vs_particles()
+bootstrap_plots(config.particle_type, config.nparticles)
 
 
 
