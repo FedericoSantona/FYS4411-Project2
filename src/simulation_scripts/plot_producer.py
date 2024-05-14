@@ -4,11 +4,12 @@ import seaborn as sns
 
 # data for training
 def training_plot() :
-    cycles = np.loadtxt("cycles.dat")
-    a_values = np.loadtxt("a_values.dat")
-    b_values = np.loadtxt("b_values.dat")
-    W_values = np.loadtxt("W_values.dat")
-    energies = np.loadtxt("energies.dat")
+
+    cycles = np.loadtxt("data_analysis/cycles.dat")
+    a_values = np.loadtxt("data_analysis/a_values.dat")
+    b_values = np.loadtxt("data_analysis/b_values.dat")
+    W_values = np.loadtxt("data_analysis/W_values.dat")
+    energies = np.loadtxt("data_analysis/energies.dat")
 
 
     #Plot a values
@@ -16,7 +17,7 @@ def training_plot() :
         plt.plot(cycles, np.transpose(a_values)[i], label=f"a_{i}")
 
     plt.legend()
-    plt.savefig("a_values.pdf")
+    plt.savefig("figures/a_values.pdf")
     plt.close()
 
     #Plot b values
@@ -24,7 +25,7 @@ def training_plot() :
         plt.plot(cycles, np.transpose(b_values)[i], label=f"b_{i}")
 
     plt.legend()
-    plt.savefig("b_values.pdf")
+    plt.savefig("figures/b_values.pdf")
     plt.close()
 
 
@@ -32,24 +33,24 @@ def training_plot() :
     for i in range(len(W_values.T)):
         plt.plot(cycles, np.transpose(W_values)[i], label=f"W_{i}")
 
-    plt.savefig("W_values.pdf")
+    plt.savefig("figures/W_values.pdf")
     plt.close()
 
 
     #Plot energies
     plt.plot(cycles, energies, label="Energy")
     plt.legend()
-    plt.savefig("energy.pdf")
+    plt.savefig("figures/energy.pdf")
 
 
 def bootstrap_plots():
 
-    n_boot_values = np.loadtxt("n_boot_values.dat")
-    variances_bo = np.loadtxt("variances_bo.dat")
-    variances_boot = np.loadtxt("variances_boot.dat")
-    block_sizes = np.loadtxt("block_sizes.dat")
-    variances_bl = np.loadtxt("variances_bl.dat")
-    variances_block = np.loadtxt("variances_block.dat")
+    n_boot_values = np.loadtxt("data_analysis/n_boot_values.dat")
+    variances_bo = np.loadtxt("data_analysis/variances_bo.dat")
+    variances_boot = np.loadtxt("data_analysis/variances_boot.dat")
+    block_sizes = np.loadtxt("data_analysis/block_sizes.dat")
+    variances_bl = np.loadtxt("data_analysis/variances_bl.dat")
+    variances_block = np.loadtxt("data_analysis/variances_block.dat")
 
 
     fig, ax = plt.subplots(1, 2, figsize=(20, 6))
@@ -74,8 +75,7 @@ def bootstrap_plots():
     plt.tight_layout()
 
     # Save the figure as a single image
-    plt.savefig("variance_comparisons.png")
-    plt.show()
+    plt.savefig("figures/variance_comparisons.png")
 
     # clean the figure and start new plot
     plt.clf()
@@ -91,16 +91,16 @@ def bootstrap_plots():
 
     plt.title("Variance Comparison: Bootstrapping vs Blocking")
     plt.legend()
-    plt.savefig("boot_vs_blocking.png")
-    plt.show()
+    plt.savefig("figures/boot_vs_blocking.png")
+    
 
 
 
 def plot_energy_vs_particles():
 
-    energies_bosons = np.loadtxt("bosons_energies.dat")
-    energies_fermions = np.loadtxt("fermion_energies.dat")
-    n_particles = np.loadtxt("n_particles.dat")
+    energies_bosons = np.loadtxt("data_analysis/bosons_energies.dat")
+    energies_fermions = np.loadtxt("data_analysis/fermion_energies.dat")
+    n_particles = np.loadtxt("data_analysis/n_particles.dat")
 
 
     plt.plot(n_particles, energies_fermions, 'o-')
@@ -108,14 +108,14 @@ def plot_energy_vs_particles():
     plt.xlabel("Number of particles")
     plt.ylabel("Energy")
     plt.legend(["Fermions", "Bosons"])
-    plt.savefig("energy_vs_particles.pdf")
+    plt.savefig("figures/energy_vs_particles.pdf")
 
 
 def plot_heatmap():
 
-    eta_values = np.loadtxt("eta_values.dat")
-    n_hidden_values = np.loadtxt("n_hidden_values.dat")
-    energy_values = np.loadtxt("energy_values.dat")
+    eta_values = np.loadtxt("data_analysis/eta_values.dat")
+    n_hidden_values = np.loadtxt("data_analysis/n_hidden_values.dat")
+    energy_values = np.loadtxt("data_analysis/energy_values.dat")
 
 
     # Create the heatmap using seaborn
@@ -130,11 +130,37 @@ def plot_heatmap():
     plt.title("Energy Values Heatmap")
 
     # Save the figure
-    plt.savefig("grid_search.pdf")
+    plt.savefig("figures/grid_search.pdf")
     # If you want to also display the heatmap
 
-    
 
+def position_plot():
+
+    sampled_positions = np.loadtxt("data_analysis/sampled_positions.dat")
+
+   
+    # Set up the FacetGrid
+    g = sns.FacetGrid(sampled_positions, col="Particle", col_wrap=3, height=4, aspect=1.5, hue='Sample', palette='viridis')
+    g.map(plt.scatter, 'X', 'Y', alpha=0.6, s=20)  # Scatter plot for each particle's position
+
+    # Adding a line plot to connect the positions, to show the movement over samples
+    g.map(plt.plot, 'X', 'Y', alpha=0.3)
+
+    # Enhance the plot
+    g.set_titles("Particle {col_name}")
+    g.add_legend(title="Sample Index")
+
+    plt.subplots_adjust(top=0.9)
+    g.fig.suptitle('Particle Trajectories Over Time')  # Overall title
+    
+    # Save the figure
+    plt.savefig("figures/position_plot.pdf")
+
+
+
+
+training_plot()
+    
 
 
     
