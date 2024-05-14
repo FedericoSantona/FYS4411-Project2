@@ -4,7 +4,7 @@ import numpy as np
 
 nparticles = 4
 dim = 3
-n_hidden = 100
+n_hidden = 20
 init_scale =  0.1
 
 

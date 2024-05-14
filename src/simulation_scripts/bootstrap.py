@@ -3,6 +3,7 @@ import jax
 import numpy as np
 import matplotlib.pyplot as plt
 import time
+import os
 
 # The following will add the path to the ../src directory, for any given laptop running the code
 # Assuming the structure of the folders are the same as Daniel initially built (i.e /src is the parent of /simulation script etc.)
@@ -30,12 +31,13 @@ def setup_and_train(n_bootstraps, block_size):
     system = quantum_state.QS(
         backend=config.backend,
         log=True,
+        h_number=config.n_hidden,
         logger_level="INFO",
         seed=config.seed,
-        alpha=config.alpha,
-        beta=config.beta,
+        radius = config.radius,
         time_step=config.time_step,
-        diffusion_coeff=config.diffusion_coeff
+        diffusion_coeff=config.diffusion_coeff,
+        type_particle = config.particle_type,
     )
     
     # Adjust parameters based on sample_size if necessary

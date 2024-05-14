@@ -516,33 +516,25 @@ class QS:
         - variance: The variance of the block means for the given block size.
         """
 
+        data = self.backend.array(data).flatten()
         n = len(data)
 
         # Ensure block_size is a valid number
         if block_size <= 0 or block_size > n:
-            raise ValueError(
-                "Invalid block_size. It must be > 0 and <= length of data."
-            )
+            raise ValueError("Invalid block_size. It must be > 0 and <= length of data.")
 
         # Number of blocks for the specified block size
         num_blocks = n // block_size
 
-        # It's important to ensure that the number of data points is a multiple of block_size
-        # If it's not, the remaining data points that don't fit into a full block are discarded
+        # Warn if the number of data points is not a multiple of block_size
         if n % block_size != 0:
-            print(
-                f"Warning: {n % block_size} data point(s) at the end are discarded for blocking."
-            )
+            print(f"Warning: {n % block_size} data point(s) at the end are discarded for blocking.")
 
         # Reshape data into blocks and calculate block means
-        block_means = self.backend.mean(
-            data[: num_blocks * block_size].reshape(num_blocks, block_size), axis=1
-        )
+        block_means = np.mean(data[: num_blocks * block_size].reshape(num_blocks, block_size), axis=1)
 
         # Calculate variance of the block means
-        variance = self.backend.var(
-            block_means, ddof=1
-        )  # ddof=1 for an unbiased estimator
+        variance = np.var(block_means, ddof=1)  # ddof=1 for an unbiased estimator
 
         return variance
 
