@@ -91,12 +91,12 @@ print(f"Acceptance rate: {results.accept_rate}")
 
 print(f"Execution time: {execution_time} seconds")
 
-np.savetxt("data_analysis/a_values.dat", a_values)
-np.savetxt("data_analysis/b_values.dat", b_values)
-np.savetxt("data_analysis/W_values.dat", W_values)
-np.savetxt("data_analysis/energies.dat", energies)
-np.savetxt("data_analysis/cycles.dat", cycles)
-np.savetxt("data_analysis/sampled_positions.dat", sampled_positions)
+np.savetxt(f"data_analysis/a_values_{config.particle_type}_{config.nparticles}.dat", a_values)
+np.savetxt(f"data_analysis/b_values_{config.particle_type}_{config.nparticles}.dat", b_values)
+np.savetxt(f"data_analysis/W_values_{config.particle_type}_{config.nparticles}.dat", W_values)
+np.savetxt(f"data_analysis/energies_{config.particle_type}_{config.nparticles}.dat", energies)
+np.savetxt(f"data_analysis/cycles_{config.particle_type}_{config.nparticles}.dat", cycles)
+np.savetxt(f"data_analysis/sampled_positions_{config.particle_type}_{config.nparticles}.dat", sampled_positions)
 
 
 
