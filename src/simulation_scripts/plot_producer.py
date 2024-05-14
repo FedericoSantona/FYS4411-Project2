@@ -89,7 +89,7 @@ def bootstrap_plots( particle_type , nparticles):
 
     # Adjust layout
     plt.tight_layout()
-    plt.savefig("figures/variance_comparisons.png")
+    plt.savefig("figures/variance_comparisons.pdf")
     plt.close()
 
     # Compare bootstrapping and blocking
@@ -100,7 +100,7 @@ def bootstrap_plots( particle_type , nparticles):
     plt.ylabel("Variance")
     plt.title(f"Variance Comparison: Bootstrapping vs Blocking of {particle_type} with {nparticles} particles")
     plt.legend()
-    plt.savefig("figures/boot_vs_blocking.png")
+    plt.savefig("figures/boot_vs_blocking.pdf")
 
 
 def plot_energy_vs_particles():
@@ -185,7 +185,12 @@ def position_plot(nparticles,  particle_type , nsamples):
 
 
 #training_plot(config.particle_type, config.nparticles)
-bootstrap_plots(config.particle_type, config.nparticles)
+#bootstrap_plots(config.particle_type, config.nparticles)
+#plot_energy_vs_particles()
+#plot_heatmap()
+#position_plot(config.nparticles, config.particle_type, config.nsamples)
+
+
 
 
 
