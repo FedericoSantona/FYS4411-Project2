@@ -90,33 +90,43 @@ print(f"Acceptance rate: {results.accept_rate}")
 
 print(f"Execution time: {execution_time} seconds")
 
-
+np.savetxt("a_values.dat", a_values)
+"""
 for i in range(config.nparticles*config.dim):
     plt.plot(cycles, np.transpose(a_values)[i], label=f"a_{i}")
 
 plt.legend()
 plt.savefig("a_values.pdf")
 plt.close()
+"""
 
+np.savetxt("b_values.dat", b_values)
+"""
 for i in range(config.n_hidden):
     plt.plot(cycles, np.transpose(b_values)[i], label=f"b_{i}")
 
 plt.legend()
 plt.savefig("b_values.pdf")
 plt.close()
+"""
 
-
+np.savetxt("W_values.dat", W_values)
+"""
 for i in range(config.n_hidden * config.nparticles*config.dim):
     plt.plot(cycles, np.transpose(W_values)[i], label=f"W_{i}")
 
 plt.savefig("W_values.pdf")
 plt.close()
+"""
 
-
+np.savetxt("energies.dat", energies)
+"""
 plt.plot(cycles, energies, label="Energy")
 plt.legend()
 plt.savefig("energy.pdf")
+"""
 
+np.savetxt("cycles.dat", cycles)
 
 
 

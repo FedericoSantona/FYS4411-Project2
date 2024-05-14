@@ -70,13 +70,13 @@ for i in n_particles:
     # set up the wave function with some of its properties 
     system_bos.set_wf(
         config.wf_type,
-        i,
+        int(i),
         config.dim,
     )
 
     system_fer.set_wf(
         config.wf_type,
-        i,
+        int(i),
         config.dim,
     )
     
@@ -105,13 +105,13 @@ for i in n_particles:
     )
 
     # train the system, meaning we find the optimal variational parameters for the wave function
-    alphas ,cycles = system_bos.train(
+    alphas ,cycles, _, _, _ = system_bos.train(
         max_iter=config.training_cycles,
         batch_size=config.batch_size,
         seed=config.seed,
     )
 
-    alphas ,cycles = system_fer.train(
+    alphas ,cycles, _, _, _ = system_fer.train(
         max_iter=config.training_cycles,
         batch_size=config.batch_size,
         seed=config.seed,
@@ -135,16 +135,16 @@ for i in n_particles:
 
 
 
-energies_fermions = np.array(energies_fermions) - fermions_add 
+energies_fermions1 = np.array(energies_fermions).squeeze() - fermions_add 
 
 
+np.savetxt("bosons_energies.dat", np.array(energy_bos))
+np.savetxt("fermion_energies.dat", np.array(energies_fermions))
 
-plt.plot(n_particles, energies_fermions, 'o-')
+plt.plot(n_particles, energies_fermions1, 'o-')
 plt.plot(n_particles, energies_bosons, 'o-')
 plt.xlabel("Number of particles")
 plt.ylabel("Energy")
 plt.legend(["Fermions", "Bosons"])
 plt.savefig("energy_vs_particles.pdf")
-
-
 
