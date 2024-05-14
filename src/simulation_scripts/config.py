@@ -2,7 +2,7 @@
 output_filename = "../data/vmc_playground.csv"
 import numpy as np
 
-nparticles = 10
+nparticles = 12
 dim = 3
 n_hidden = 100
 init_scale =  0.001
@@ -29,7 +29,7 @@ batch_size = 400
 
 
 hamiltonian = "ho" # either ho or eo 
-interaction = "Coulomb" # either Coulomb or None
+interaction = "None" # either Coulomb or None
 
 detailed = True
 wf_type = "vmc" 

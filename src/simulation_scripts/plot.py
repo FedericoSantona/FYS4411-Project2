@@ -32,15 +32,16 @@ All the parameters you want to change are contained in the file config.py
 # set up the system with its backend and level of logging, seed, and other general properties depending on how you want to run it
 
 
-n_iteration = 1000
-energies = []
+n_particles = np.array([ 2 ,4 , 6 , 8 , 10  ])
 
-for i in range(n_iteration):
+fermions_add = np.array([3 , 8 , 13 , 18  , 25 ])
+energies_fermions = []
+energies_bosons = []
+
+for i in n_particles:
     
-
-
     # set up the system with its backend and level of logging, seed, and other general properties depending on how you want to run it
-    system = quantum_state.QS(
+    system_bos = quantum_state.QS(
         backend=config.backend,
         log=True,
         h_number=config.n_hidden,
@@ -48,45 +49,102 @@ for i in range(n_iteration):
         seed=config.seed,
         radius = config.radius,
         time_step=config.time_step,
-        diffusion_coeff=config.diffusion_coeff
+        diffusion_coeff=config.diffusion_coeff,
+        type_particle = "bosons"
+    )
+
+
+    system_fer = quantum_state.QS(
+        backend=config.backend,
+        log=True,
+        h_number=config.n_hidden,
+        logger_level="INFO",
+        seed=config.seed,
+        radius = config.radius,
+        time_step=config.time_step,
+        diffusion_coeff=config.diffusion_coeff,
+        type_particle = "fermions"
     )
 
 
     # set up the wave function with some of its properties 
-    system.set_wf(
+    system_bos.set_wf(
         config.wf_type,
-        config.nparticles,
+        i,
+        config.dim,
+    )
+
+    system_fer.set_wf(
+        config.wf_type,
+        i,
         config.dim,
     )
     
 
     # choose the hamiltonian
-    system.set_hamiltonian(type_=config.hamiltonian, int_type=config.interaction, omega=1.0)
+    system_bos.set_hamiltonian(type_=config.hamiltonian, int_type=config.interaction, omega=1.0)
+
+    system_fer.set_hamiltonian(type_=config.hamiltonian, int_type=config.interaction, omega=1.0)
 
     # choose the sampler algorithm and scale
-    system.set_sampler(mcmc_alg=config.mcmc_alg, scale=config.scale)
+    system_bos.set_sampler(mcmc_alg=config.mcmc_alg, scale=config.scale)
+
+    system_fer.set_sampler(mcmc_alg=config.mcmc_alg, scale=config.scale)
+
 
 
     # choose the optimizer, learning rate, and other properties depending on the optimizer
-    system.set_optimizer(
+    system_bos.set_optimizer(
+        optimizer=config.optimizer,
+        eta=config.eta,
+    )
+
+    system_fer.set_optimizer(
         optimizer=config.optimizer,
         eta=config.eta,
     )
 
     # train the system, meaning we find the optimal variational parameters for the wave function
-    alphas ,cycles = system.train(
+    alphas ,cycles = system_bos.train(
+        max_iter=config.training_cycles,
+        batch_size=config.batch_size,
+        seed=config.seed,
+    )
+
+    alphas ,cycles = system_fer.train(
         max_iter=config.training_cycles,
         batch_size=config.batch_size,
         seed=config.seed,
     )
 
     # now we get the results or do whatever we want with them
-    results , _ , _  = system.sample(config.nsamples, nchains=config.nchains, seed=config.seed)
+    results_bos , _ , _  = system_bos.sample(config.nsamples, nchains=config.nchains, seed=config.seed)
+    results_fer , _ , _  = system_fer.sample(config.nsamples, nchains=config.nchains, seed=config.seed)
 
-    energies.append(results.energy)
 
+
+    energy_bos = results_bos.energy - 0.5 * i * config.dim
+
+    energy_fer = results_fer.energy 
+
+       
+
+    energies_bosons.append(energy_bos)
+    energies_fermions.append(energy_fer)
     
-    
-plt.hist(energies) 
-plt.savefig("histo.pdf")
+
+
+
+energies_fermions = np.array(energies_fermions) - fermions_add 
+
+
+
+plt.plot(n_particles, energies_fermions, 'o-')
+plt.plot(n_particles, energies_bosons, 'o-')
+plt.xlabel("Number of particles")
+plt.ylabel("Energy")
+plt.legend(["Fermions", "Bosons"])
+plt.savefig("energy_vs_particles.pdf")
+
+
 

@@ -51,6 +51,7 @@ class QS:
         time_step=None,
         diffusion_coeff=None,
         type_hamiltonian="ho",
+        type_particle="bosons",
     ):
         """Quantum State
         It is conceptually important to understand that this is the system.
@@ -82,6 +83,7 @@ class QS:
         self.time_step = time_step
         self.diffusion_coeff = diffusion_coeff
         self.type_hamiltonian = type_hamiltonian
+        self._particle_type = type_particle
 
         if rng is None:
             # If no RNG is provided but a seed is, initialize a new RNG with the seed.
@@ -121,7 +123,7 @@ class QS:
         self._M = self._N * self._dim
         self._wf_type = wf_type
 
-        if config.particle_type == "bosons":
+        if self._particle_type == "bosons":
             # Initialize the VMC class object
             self.alg = VMC(
                 self._N,
@@ -135,7 +137,7 @@ class QS:
                 backend=self._backend,
                 radius=self.radius,
             )
-        elif config.particle_type == "fermions":
+        elif self._particle_type == "fermions":
             # Initialize the VMC class object
             self.alg = VMC_fermions(
                 self._N,
@@ -204,7 +206,7 @@ class QS:
 
         if self.mcmc_alg == "m":
             print("The chosen MCMC algorithm is the Metropolis algorithm")
-            if config.particle_type == "bosons":
+            if self._particle_type == "bosons":
                 self.sampler = Metro(
                     vmc_instance,
                     hami,
@@ -218,7 +220,7 @@ class QS:
                     self.logger_level,
                     self._backend,
                 )
-            elif config.particle_type == "fermions":
+            elif self._particle_type == "fermions":
                 self.sampler = MetroFermions(
                     vmc_instance,
                     hami,
@@ -235,7 +237,7 @@ class QS:
 
         elif self.mcmc_alg == "mh":
             print("The chosen MCMC algorithm is the Metropolis-Hastings algorithm")
-            if config.particle_type == "bosons":
+            if self._particle_type == "bosons":
                 self.sampler = MetroHastings(
                     vmc_instance,
                     hami,
@@ -251,7 +253,7 @@ class QS:
                     self.time_step,
                     self.diffusion_coeff,
                 )
-            elif config.particle_type == "fermions":
+            elif self._particle_type == "fermions":
                 self.sampler = MetroHastingsFermions(
                     vmc_instance,
                     hami,
