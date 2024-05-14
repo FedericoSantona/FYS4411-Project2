@@ -105,8 +105,8 @@ def bootstrap_plots( particle_type , nparticles):
 
 def plot_energy_vs_particles():
 
-    energies_bosons = np.loadtxt("data_analysis/bosons_energies.dat")
-    energies_fermions = np.loadtxt("data_analysis/fermion_energies.dat")
+    energies_bosons = np.loadtxt("data_analysis/energies_bosons.dat")
+    energies_fermions = np.loadtxt("data_analysis/energies_fermion.dat")
     n_particles = np.loadtxt("data_analysis/n_particles.dat")
 
 
@@ -184,8 +184,8 @@ def position_plot(nparticles,  particle_type , nsamples):
 
 
 
-training_plot(config.particle_type, config.nparticles)
-    
+#training_plot(config.particle_type, config.nparticles)
+plot_energy_vs_particles()
 
 
 

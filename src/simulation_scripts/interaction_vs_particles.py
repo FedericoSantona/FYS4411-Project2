@@ -138,8 +138,8 @@ for i in n_particles:
 energies_fermions1 = np.array(energies_fermions).squeeze() - fermions_add 
 
 
-np.savetxt("bosons_energies.dat", np.array(energies_bosons))
-np.savetxt("fermion_energies.dat", np.array(energies_fermions1))
-np.savetxt("n_particles.dat", n_particles)
+np.savetxt("data_analysis/bosons_energies.dat", np.array(energies_bosons))
+np.savetxt("data_analysis/fermion_energies.dat", np.array(energies_fermions1))
+np.savetxt("data_analysis/n_particles.dat", n_particles)
 
 
