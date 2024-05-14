@@ -71,11 +71,11 @@ for block_size in block_sizes:
 
 
 
-np.savetxt("data_analysis/n_boot_values.dat", n_boot_values)
-np.savetxt("data_analysis/variances_bo.dat", variances_bo)
-np.savetxt("data_analysis/variances_boot.dat", variances_boot)
-np.savetxt("data_analysis/block_sizes.dat", block_sizes)
-np.savetxt("data_analysis/variances_bl.dat", variances_bl)
-np.savetxt("data_analysis/variances_block.dat", variances_block)
+np.savetxt("data_analysis/n_boot_values_{config.particle_type}_{config.nparticles}.dat", n_boot_values)
+np.savetxt("data_analysis/variances_bo_{config.particle_type}_{config.nparticles}.dat", variances_bo)
+np.savetxt("data_analysis/variances_boot_{config.particle_type}_{config.nparticles}.dat", variances_boot)
+np.savetxt("data_analysis/block_sizes_{config.particle_type}_{config.nparticles}.dat", block_sizes)
+np.savetxt("data_analysis/variances_bl_{config.particle_type}_{config.nparticles}.dat", variances_bl)
+np.savetxt("data_analysis/variances_block_{config.particle_type}_{config.nparticles}.dat", variances_block)
 
 
