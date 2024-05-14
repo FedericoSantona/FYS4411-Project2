@@ -15,7 +15,9 @@ b_values.dat
 W_values.dat
 cycles.dat
 energies.dat
-
+energy_values.dat
+eta_values.dat
+n_hidden_values.dat
 
 ### Python ###
 # Byte-compiled / optimized / DLL files
