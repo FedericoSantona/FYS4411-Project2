@@ -130,24 +130,27 @@ def plot_energy_vs_particles():
 def plot_heatmap(part_typ, n_part, optimizer, mcmc_alg):
     
 
-    eta_values = np.loadtxt(f"data_analysis/eta_values_{part_typ}_{n_part}_{optimizer}_{mcmc_alg}.dat")
-    n_hidden_values = np.loadtxt(f"data_analysis/n_hidden_values_{part_typ}_{n_part}_{optimizer}_{mcmc_alg}.dat")
-    energy_values = np.loadtxt(f"data_analysis/energy_values_{part_typ}_{n_part}_{optimizer}_{mcmc_alg}.dat")
+    eta_values = np.loadtxt(f"../../data_analysis/eta_values_{part_typ}_{n_part}_{optimizer}_{mcmc_alg}.dat")
+    n_hidden_values = np.loadtxt(f"../../data_analysis/n_hidden_values_{part_typ}_{n_part}_{optimizer}_{mcmc_alg}.dat")
+    energy_values = np.loadtxt(f"../../data_analysis/energy_values_{part_typ}_{n_part}_{optimizer}_{mcmc_alg}.dat")
 
 
     # Create the heatmap using seaborn
-    ax = sns.heatmap(energy_values, annot=True, fmt=".2f", cmap='viridis',
-                    xticklabels=n_hidden_values, yticklabels=eta_values)
+    
+    data = pd.DataFrame(energy_values,index = n_hidden_values, columns = eta_values)
+    #breakpoint()
+    ax = sns.heatmap(data, annot=True, fmt=".2f")
+    #sns.heatmap(data, annot=True, fmt=".2f")
 
     # Invert the y-axis to have the (0,0) on the top left corner
     ax.invert_yaxis()
 
-    plt.xlabel("Number of hidden units")
-    plt.ylabel("Learning rate")
-    plt.title("Energy Values Heatmap")
+    plt.ylabel("Number of hidden units")
+    plt.xlabel("Learning rate")
+    #plt.title("Energy Values Heatmap")
 
     # Save the figure
-    plt.savefig("figures/grid_search.pdf")
+    plt.savefig(f"figures/grid_search_{part_typ}_{n_part}_{optimizer}_{mcmc_alg}.pdf")
     # If you want to also display the heatmap
 
 
@@ -188,7 +191,8 @@ def position_plot(nparticles,  particle_type , nsamples):
 #training_plot(config.particle_type, config.nparticles)
 #bootstrap_plots(config.particle_type, config.nparticles)
 #plot_energy_vs_particles()
-#plot_heatmap()
+#plot_heatmap("bosons","1","adam","m")
+plot_heatmap("bosons","1","adam","m")
 #position_plot(config.nparticles, config.particle_type, config.nsamples)
 
 

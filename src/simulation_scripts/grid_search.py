@@ -28,7 +28,7 @@ jax.config.update("jax_platform_name", "cpu")
 All the parameters you want to change are contained in the file config.py
 
 """
-
+    
 eta_values = [0.0001, 0.001, 0.01, 0.1, 1.0]
 n_hidden_values = [2, 4, 6, 8, 10]
 
