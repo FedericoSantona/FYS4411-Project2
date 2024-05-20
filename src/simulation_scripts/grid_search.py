@@ -93,9 +93,9 @@ for i, eta in enumerate(eta_values):
         energy_values[i , j] = results.energy
 
 
-np.savetxt(f"data_analysis/eta_values_{config.particle_type}_{config.nparticles}.dat", eta_values)
-np.savetxt(f"data_analysis/n_hidden_values_{config.particle_type}_{config.nparticles}.dat", n_hidden_values)
-np.savetxt(f"data_analysis/energy_values_{config.particle_type}_{config.nparticles}.dat", energy_values)
+np.savetxt(f"data_analysis/eta_values_{config.particle_type}_{config.nparticles}_{config.optimizer}_{config.mcmc_alg}.dat", eta_values)
+np.savetxt(f"data_analysis/n_hidden_values_{config.particle_type}_{config.nparticles}_{config.optimizer}_{config.mcmc_alg}.dat", n_hidden_values)
+np.savetxt(f"data_analysis/energy_values_{config.particle_type}_{config.nparticles}_{config.optimizer}_{config.mcmc_alg}.dat", energy_values)
 
 
 

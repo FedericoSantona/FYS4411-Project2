@@ -127,11 +127,12 @@ def plot_energy_vs_particles():
     plt.savefig("figures/energy_vs_particles.pdf")
 
 
-def plot_heatmap():
+def plot_heatmap(part_typ, n_part, optimizer, mcmc_alg):
+    
 
-    eta_values = np.loadtxt("data_analysis/eta_values.dat")
-    n_hidden_values = np.loadtxt("data_analysis/n_hidden_values.dat")
-    energy_values = np.loadtxt("data_analysis/energy_values.dat")
+    eta_values = np.loadtxt(f"data_analysis/eta_values_{part_typ}_{n_part}_{optimizer}_{mcmc_alg}.dat")
+    n_hidden_values = np.loadtxt(f"data_analysis/n_hidden_values_{part_typ}_{n_part}_{optimizer}_{mcmc_alg}.dat")
+    energy_values = np.loadtxt(f"data_analysis/energy_values_{part_typ}_{n_part}_{optimizer}_{mcmc_alg}.dat")
 
 
     # Create the heatmap using seaborn
