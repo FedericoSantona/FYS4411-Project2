@@ -137,7 +137,7 @@ def plot_heatmap(part_typ, n_part, optimizer, mcmc_alg):
 
     # Create the heatmap using seaborn
     
-    data = pd.DataFrame(energy_values,index = n_hidden_values, columns = eta_values)
+    data = pd.DataFrame(energy_values,index = eta_values, columns = n_hidden_values)
     #breakpoint()
     ax = sns.heatmap(data, annot=True, fmt=".2f")
     #sns.heatmap(data, annot=True, fmt=".2f")
@@ -145,8 +145,8 @@ def plot_heatmap(part_typ, n_part, optimizer, mcmc_alg):
     # Invert the y-axis to have the (0,0) on the top left corner
     ax.invert_yaxis()
 
-    plt.ylabel("Number of hidden units")
-    plt.xlabel("Learning rate")
+    plt.xlabel("Number of hidden units")
+    plt.ylabel("Learning rate")
     #plt.title("Energy Values Heatmap")
 
     # Save the figure
