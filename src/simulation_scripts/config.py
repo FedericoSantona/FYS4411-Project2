@@ -2,7 +2,7 @@
 output_filename = "../data/vmc_playground.csv"
 import numpy as np
 
-nparticles = 4
+nparticles = 10
 dim = 1
 n_hidden = 20
 init_scale =  0.1
@@ -12,7 +12,7 @@ omega = 1 #Ho frequency
 
 WF_scale = 1 # This is the decider between using psi =sqrt(F) [2] or psi = F [1] 
 
-particle_type = "bosons" # either "bosons" or "fermions"
+particle_type = "fermions" # either "bosons" or "fermions"
 max_degree = nparticles // 2
 
 nsamples =  int(2**12) #  2**18 = 262144
