@@ -34,7 +34,6 @@ All the parameters you want to change are contained in the file config.py
 
 n_particles = np.array([ 2 ,4 , 6 , 8 , 10  ])
 
-fermions_add = np.array([3 , 8 , 13 , 18  , 25 ])
 energies_fermions = []
 energies_bosons = []
 
@@ -123,7 +122,7 @@ for i in n_particles:
 
 
 
-    energy_bos = results_bos.energy - 0.5 * i * config.dim
+    energy_bos = results_bos.energy 
 
     energy_fer = results_fer.energy 
 
@@ -135,11 +134,8 @@ for i in n_particles:
 
 
 
-energies_fermions = np.array(energies_fermions).squeeze() - fermions_add 
-
-
-np.savetxt("data_analysis/int_bosons_energies.dat", np.array(energies_bosons))
-np.savetxt("data_analysis/int_fermion_energies.dat", np.array(energies_fermions))
+np.savetxt("data_analysis/bosons_energies.dat", np.array(energies_bosons))
+np.savetxt("data_analysis/fermion_energies.dat", np.array(energies_fermions))
 np.savetxt("data_analysis/n_particles.dat", n_particles)
 
 

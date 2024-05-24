@@ -536,7 +536,7 @@ class QS:
         # Calculate variance of the block means
         variance = np.var(block_means, ddof=1)  # ddof=1 for an unbiased estimator
 
-        return variance
+        return block_means ,variance
 
     def _is_initialized(self):
         if not self._is_initialized_:

@@ -103,6 +103,30 @@ def bootstrap_plots( particle_type , nparticles):
     plt.savefig("figures/boot_vs_blocking.pdf")
 
 
+def plot_int_energy_vs_particles():
+
+    energies_bosons = np.loadtxt("data_analysis/int_bosons_energies.dat")
+    energies_fermions = np.loadtxt("data_analysis/int_fermion_energies.dat")
+    n_particles = np.loadtxt("data_analysis/n_particles.dat")
+
+
+    # Set Seaborn style
+    sns.set(style="whitegrid", palette="muted")
+
+    # Create the plot
+    plt.figure(figsize=(10, 6))  # Optionally increase figure size for better readability
+    plt.plot(n_particles, energies_fermions, 'o-', label="Fermions", linewidth=2, markersize=8)
+    plt.plot(n_particles, energies_bosons, 's-', label="Bosons", linewidth=2, markersize=8)
+    plt.xlabel("Number of particles")
+    plt.ylabel("Interacting Energy")
+    plt.title("Energy vs Number of Particles")
+    plt.legend(title="Particle Type")
+    plt.grid(True)  # Ensure the grid is enabled
+
+    # Save the figure
+    plt.savefig("figures/energy_vs_particles.pdf")
+
+
 def plot_energy_vs_particles():
 
     energies_bosons = np.loadtxt("data_analysis/bosons_energies.dat")
@@ -190,9 +214,10 @@ def position_plot(nparticles,  particle_type , nsamples):
 
 #training_plot(config.particle_type, config.nparticles)
 #bootstrap_plots(config.particle_type, config.nparticles)
+#plot_int_energy_vs_particles()
 #plot_energy_vs_particles()
 #plot_heatmap("bosons","1","adam","m")
-plot_heatmap("bosons","2","adam","mh")
+#plot_heatmap("bosons","2","adam","mh")
 #position_plot(config.nparticles, config.particle_type, config.nsamples)
 
 

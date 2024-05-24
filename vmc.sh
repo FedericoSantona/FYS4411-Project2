@@ -13,6 +13,9 @@ then
 elif [ "$1" == int ]
 then
     python3 src/simulation_scripts/interaction_vs_particles.py
+elif [ "$1" == energy ]
+then
+     python3 src/simulation_scripts/energy_particle.py
 elif [ "$1" == boot ]
 then
     python3 src/simulation_scripts/bootstrap.py
