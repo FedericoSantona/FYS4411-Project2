@@ -16,6 +16,8 @@ sys.path.append(parent_dir)
 import jax
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
+import pandas as pd
 
 
 from qs import quantum_state
@@ -36,6 +38,8 @@ n_particles = np.array([ 2 ,4 , 6 , 8 , 10  ])
 
 energies_fermions = []
 energies_bosons = []
+variances_fermions = []
+variances_bosons = []
 
 for i in n_particles:
     
@@ -117,19 +121,20 @@ for i in n_particles:
     )
 
     # now we get the results or do whatever we want with them
-    results_bos , _ , _  = system_bos.sample(config.nsamples, nchains=config.nchains, seed=config.seed)
-    results_fer , _ , _  = system_fer.sample(config.nsamples, nchains=config.nchains, seed=config.seed)
+    results_bos , _ , local_en_bos = system_bos.sample(config.nsamples, nchains=config.nchains, seed=config.seed)
+    results_fer , _ , local_en_fer  = system_fer.sample(config.nsamples, nchains=config.nchains, seed=config.seed)
 
 
+    block_size = 1000 # this is the block size for the blocking method
 
-    energy_bos = results_bos.energy 
+    energy_bos , variance_bos = system_bos.blocking_method(local_en_bos , block_size )
+    energy_fer , variance_fer = system_fer.blocking_method(local_en_fer , block_size )
 
-    energy_fer = results_fer.energy 
-
-       
 
     energies_bosons.append(energy_bos)
     energies_fermions.append(energy_fer)
+    variances_bosons.append(variance_bos)
+    variances_fermions.append(variance_fer)
     
 
 
@@ -137,5 +142,9 @@ for i in n_particles:
 np.savetxt("data_analysis/bosons_energies.dat", np.array(energies_bosons))
 np.savetxt("data_analysis/fermion_energies.dat", np.array(energies_fermions))
 np.savetxt("data_analysis/n_particles.dat", n_particles)
+np.savetxt("data_analysis/bosons_variances.dat", np.array(variances_bosons))
+np.savetxt("data_analysis/fermion_variances.dat", np.array(variances_fermions))
+
+
 
 

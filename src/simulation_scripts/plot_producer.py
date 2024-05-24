@@ -214,13 +214,38 @@ def position_plot(nparticles,  particle_type , nsamples):
     plt.savefig("figures/position_plot.pdf")
 
 
+def print_table():
+    
+    #load the data
+    energies_bosons = np.loadtxt("data_analysis/bosons_energies.dat")
+    energies_fermions = np.loadtxt("data_analysis/fermion_energies.dat")
+    n_particles = np.loadtxt("data_analysis/n_particles.dat")
+    variances_bosons = np.loadtxt("data_analysis/bosons_variances.dat")
+    variances_fermions = np.loadtxt("data_analysis/fermion_variances.dat")  
+
+    #create the table
+
+    # Creating a dictionary with column names and lists
+    data = {
+        'n_particles': n_particles,
+        'energies_bosons': energies_bosons,
+        'energies_fermions': energies_fermions,
+        'variances_bosons': variances_bosons,
+        'variances_fermions': variances_fermions
+    }
+
+    # Converting the dictionary into a DataFrame
+    df = pd.DataFrame(data)
+
+    # Printing the DataFrame
+    print(df)
 
 
 
-#training_plot(config.particle_type, config.nparticles)
+training_plot(config.particle_type, config.nparticles)
 #bootstrap_plots(config.particle_type, config.nparticles)
 #plot_int_energy_vs_particles()
-plot_energy_vs_particles()
+#plot_energy_vs_particles()
 #plot_heatmap("bosons","1","adam","m")
 #plot_heatmap("bosons","2","adam","mh")
 #position_plot(config.nparticles, config.particle_type, config.nsamples)
