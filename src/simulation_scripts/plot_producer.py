@@ -14,13 +14,15 @@ def training_plot(particle_type, nparticles):
     energies = np.loadtxt(f"data_analysis/energies_{particle_type}_{nparticles}.dat")
 
     sns.set(style="whitegrid")
-
-    # Plot a_values
-    for i in range(a_values.shape[1]):
-        plt.plot(cycles, a_values[:, i], label=f"a_{i}")
-    plt.title(f"A Values Over Cycles of {particle_type} with {nparticles} particles")
+    if a.ndim ==1:
+        plt.plot(cycles, a_values, label=f"a")
+    else: 
+        # Plot a_values
+        for i in range(a_values.shape[1]):
+            plt.plot(cycles, a_values[:, i], label=f"a_{i}")
+    #plt.title(f"A Values Over Cycles of {particle_type} with {nparticles} particles")
     plt.xlabel("Cycles")
-    plt.ylabel("A Values")
+    plt.ylabel("a Values")
     plt.legend()
     plt.savefig("figures/a_values.pdf")
     plt.close()
@@ -28,9 +30,9 @@ def training_plot(particle_type, nparticles):
     # Plot b_values
     for i in range(b_values.shape[1]):
         plt.plot(cycles, b_values[:, i], label=f"b_{i}")
-    plt.title(f"B Values Over Cycles of {particle_type} with {nparticles} particles")
+    #plt.title(f"B Values Over Cycles of {particle_type} with {nparticles} particles")
     plt.xlabel("Cycles")
-    plt.ylabel("B Values")
+    plt.ylabel("b Values")
     plt.legend()
     plt.savefig("figures/b_values.pdf")
     plt.close()
@@ -38,18 +40,18 @@ def training_plot(particle_type, nparticles):
     # Plot W_values
     for i in range(W_values.shape[1]):
         plt.plot(cycles, W_values[:, i], label=f"W_{i}")
-    plt.title(f"W Values Over Cycles of {particle_type} with {nparticles} particles")
+    #plt.title(f"W Values Over Cycles of {particle_type} with {nparticles} particles")
     plt.xlabel("Cycles")
-    plt.ylabel("W Values")
+    plt.ylabel("w Values")
     plt.legend()
     plt.savefig("figures/W_values.pdf")
     plt.close()
 
     # Plot energies
     plt.plot(cycles, energies, label="Energy")
-    plt.title(f"Energy Over Cycles of {particle_type} with {nparticles} particles" )
+    #plt.title(f"Energy Over Cycles of {particle_type} with {nparticles} particles" )
     plt.xlabel("Cycles")
-    plt.ylabel("Energy")
+    plt.ylabel("Energy [a.u.]")
     plt.legend()
     plt.savefig("figures/energy.pdf")
     plt.close()
