@@ -72,7 +72,7 @@ class Adam(Optimizer):
 
         self.t += 1
 
-        t_ =  self.eta / (1 + 5 * (ite/ config.nparticles) )
+        t_ =  self.eta# / (1 + 5 * (ite/ config.nparticles) )
 
         updated_params = []
         for p, g, m, v in zip(params, grads, self.m, self.v):
