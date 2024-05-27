@@ -120,7 +120,7 @@ def plot_int_energy_vs_particles():
     plt.plot(n_particles, energies_fermions, 'o-', label="Fermions", linewidth=2, markersize=8)
     plt.plot(n_particles, energies_bosons, 's-', label="Bosons", linewidth=2, markersize=8)
     plt.xlabel("Number of particles")
-    plt.ylabel("Interacting Energy")
+    plt.ylabel("Interacting Energy [a.u.]")
     plt.title("Energy vs Number of Particles")
     plt.legend(title="Particle Type")
     plt.grid(True)  # Ensure the grid is enabled
@@ -149,7 +149,7 @@ def plot_energy_vs_particles():
     plt.plot(n_particles, en_bosons_teo, '--', label="theoretical", linewidth=2, markersize=8 , color="red")
     plt.plot(n_particles, en_fermions_teo, '--', linewidth=2, markersize=8 , color="red")
     plt.xlabel("Number of particles")
-    plt.ylabel("Energy")
+    plt.ylabel("Energy [a.u.]")
     plt.title("Energy vs Number of Particles")
     plt.legend(title="Particle Type")
     plt.grid(True)  # Ensure the grid is enabled
