@@ -107,8 +107,7 @@ np.savetxt(f"data_analysis/b_values_{config.particle_type}_{config.nparticles}.d
 np.savetxt(f"data_analysis/W_values_{config.particle_type}_{config.nparticles}.dat", W_values)
 np.savetxt(f"data_analysis/energies_{config.particle_type}_{config.nparticles}.dat", energies)
 np.savetxt(f"data_analysis/cycles_{config.particle_type}_{config.nparticles}.dat", cycles)
-np.savetxt(f"data_analysis/sampled_positions_{config.particle_type}_{config.nparticles}_{config.nsamples}.dat", sampled_positions)
-
+np.savetxt(f"data_analysis/sampled_positions_{config.particle_type}_{config.nparticles}_{config.nsamples}_{config.interaction}.dat", sampled_positions)
 
 
 
