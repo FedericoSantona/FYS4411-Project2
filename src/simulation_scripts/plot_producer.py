@@ -14,7 +14,7 @@ def training_plot(particle_type, nparticles):
     energies = np.loadtxt(f"data_analysis/energies_{particle_type}_{nparticles}.dat")
 
     sns.set(style="whitegrid")
-    if a.ndim ==1:
+    if a_values.ndim ==1:
         plt.plot(cycles, a_values, label=f"a")
     else: 
         # Plot a_values
