@@ -418,8 +418,6 @@ def energy_grad_param(N, D, H,
 
 
 # def optimization, use batch step to obtain the energy gradient and update the params, do that for optimization step
-# input 
-# for step in optimization_step, get metropolis for batch_step, get energy_grad_param, update params using lr
 def optimization(N, D, H, 
                  params, 
                  optimization_steps, batch_size, step_size=0.1,
