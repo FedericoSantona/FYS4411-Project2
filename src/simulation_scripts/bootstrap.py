@@ -52,9 +52,9 @@ results, sampled_positions, local_energies = system.sample(config.nsamples, ncha
 
 def stat_analysis(n_bootstraps, block_size):
 
-    mean_energy_boot, variance_energy_boot = system.superBoot(local_energies, n_bootstraps)
+    _ , variance_energy_boot = system.superBoot(local_energies, n_bootstraps)
 
-    block_variance = system.blocking_method(local_energies , block_size )
+    _ , block_variance = system.blocking_method(local_energies , block_size )
     
     
     return  results.variance, variance_energy_boot , block_variance

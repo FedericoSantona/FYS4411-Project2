@@ -84,6 +84,9 @@ class QS:
         self.diffusion_coeff = diffusion_coeff
         self.type_hamiltonian = type_hamiltonian
         self._particle_type = type_particle
+        self.a_final = 0
+        self.b_final = 0
+        self.W_final = 0
 
         if rng is None:
             # If no RNG is provided but a seed is, initialize a new RNG with the seed.
@@ -408,10 +411,18 @@ class QS:
         )
         self._is_trained_ = True
 
+        self.a_final = self.a
+        self.b_final = self.b
+        self.W_final = self.W
+
         if self.logger is not None:
             self.logger.info("Training done")
 
         return cycles, a_values, b_values, W_values , energies
+    
+
+    def wf(self):
+        return self.wf
 
 
     def sample(self, nsamples, nchains=1, seed=None):

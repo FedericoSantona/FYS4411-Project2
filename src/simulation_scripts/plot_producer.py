@@ -66,10 +66,11 @@ def bootstrap_plots( particle_type , nparticles):
     variances_bl = np.loadtxt(f"data_analysis/variances_bl_{particle_type}_{nparticles}.dat")
     variances_block = np.loadtxt(f"data_analysis/variances_block_{particle_type}_{nparticles}.dat")
 
+    #breakpoint()
 
     # Set Seaborn style
     sns.set(style="whitegrid", context="talk", palette="colorblind")
-
+    """
     # Create a figure with subplots
     fig, ax = plt.subplots(1, 2, figsize=(20, 6))
 
@@ -93,15 +94,16 @@ def bootstrap_plots( particle_type , nparticles):
     plt.tight_layout()
     plt.savefig("figures/variance_comparisons.pdf")
     plt.close()
-
+    """
     # Compare bootstrapping and blocking
     plt.figure(figsize=(12, 8))
-    plt.plot(n_boot_values, variances_boot, label="Variance with bootstrap", marker='o', linestyle='-', linewidth=2)
-    plt.plot(block_sizes, variances_block, label="Variance with Blocking", marker='x', linestyle='--', linewidth=2)
+    plt.plot(n_boot_values, variances_bo, label="Untreated Variance ", marker='x', linestyle='--', linewidth=2)
+    plt.plot(n_boot_values, variances_boot, label="Variance with bootstrap", marker='x', linestyle='-', linewidth=2)
+    plt.plot(n_boot_values, variances_block, label="Variance with Blocking", marker='x', linestyle='--', linewidth=2)
     plt.xlabel("Number of Bootstraps / Block Sizes")
     plt.ylabel("Variance")
     plt.title(f"Variance Comparison: Bootstrapping vs Blocking of {particle_type} with {nparticles} particles")
-    plt.legend()
+    plt.legend(loc='upper right', bbox_to_anchor=(1, 0.85), frameon=True)
     plt.savefig("figures/boot_vs_blocking.pdf")
 
 
@@ -156,6 +158,62 @@ def plot_energy_vs_particles():
 
     # Save the figure
     plt.savefig("figures/energy_vs_particles.pdf")
+
+
+
+def plot_delta_t():
+
+    energy = np.loadtxt(f"data_analysis/energy_delta_t{config.particle_type}_{config.nparticles}.dat")
+    variance = np.loadtxt(f"data_analysis/variance_delta_t{config.particle_type}_{config.nparticles}.dat")
+    delta_t_values = np.loadtxt(f"data_analysis/delta_t_values_{config.particle_type}_{config.nparticles}.dat")
+
+
+    # Set Seaborn style
+    sns.set(style="whitegrid", palette="muted")
+    print("energies" , energy)
+    print("variances" , variance)
+    print("log(delta_t_values)" , np.log10(delta_t_values))
+
+    # Create the plot
+    plt.figure(figsize=(10, 6))  # Optionally increase figure size for better readability
+    plt.plot(np.log10(delta_t_values), energy, 'o-', label="Energy", linewidth=2, markersize=8, color="blue")
+   # plt.plot(np.log(delta_t_values), variance, 's-', label="Variance", linewidth=2, markersize=8 , color="green")
+    plt.xlabel("log(delta_t) ")
+    plt.ylabel("Energy [a.u.]")
+    plt.title("Energy vs delta_t")
+    plt.grid(True)  # Ensure the grid is enabled
+
+    # Save the figure
+    plt.savefig("figures/delta_t_plot.pdf")
+
+
+def plot_one_body_density():
+
+    # Load the data
+
+    X1 = np.loadtxt("data_analysis/X1.dat")
+    Y1 = np.loadtxt("data_analysis/Y1.dat")
+    r1 = np.loadtxt("data_analysis/r1.dat")
+    rho_non_int = np.loadtxt("data_analysis/rho_non_int.dat")
+    rho_int = np.loadtxt("data_analysis/rho_int.dat")
+    rho1_non_int = np.loadtxt("data_analysis/rho1_non_int.dat")
+    rho1_int = np.loadtxt("data_analysis/rho1_int.dat")
+
+    # Set the seaborn style
+    sns.set(style='whitegrid', context='talk')
+
+   
+    # Create the plot
+    plt.figure(figsize=(10, 8))
+    sns.lineplot(x=r1, y=rho1_int, label='Interacting Particles', color='blue', lw=2)
+    sns.lineplot(x=r1, y=rho1_non_int, label='Non-interacting Particles', color='red', lw=2)
+    plt.xlabel('$r$', fontsize=14)
+    plt.ylabel(r'$\rho(r)$', fontsize=14)
+    plt.title('One-body Density as a Function of Radial Distance', fontsize=16)
+    plt.legend(fontsize=12)
+    plt.grid(True, linestyle='--', linewidth=0.7)
+    plt.tight_layout()
+    plt.savefig("figures/one_body_density.pdf")
 
 
 def plot_heatmap(part_typ, n_part, optimizer, mcmc_alg):
@@ -244,8 +302,10 @@ def print_table():
 
 
 
-training_plot(config.particle_type, config.nparticles)
+#training_plot(config.particle_type, config.nparticles)
 #bootstrap_plots(config.particle_type, config.nparticles)
+#plot_delta_t()
+plot_one_body_density()
 #plot_int_energy_vs_particles()
 #plot_energy_vs_particles()
 #plot_heatmap("bosons","1","adam","m")

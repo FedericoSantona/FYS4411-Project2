@@ -22,6 +22,12 @@ then
 elif [ "$1" == plot ]
 then 
     python3 src/simulation_scripts/plot_producer.py
+elif [ "$1" == deltat ]
+then
+    python3 src/simulation_scripts/delta_t.py
+elif [ "$1" == onebody ]
+then
+    python3 src/simulation_scripts/one_body.py
 else
     python3 src/simulation_scripts/"$1"
 fi
