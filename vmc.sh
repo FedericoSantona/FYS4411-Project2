@@ -28,6 +28,10 @@ then
 elif [ "$1" == onebody ]
 then
     python3 src/simulation_scripts/one_body.py
+elif [ "$1" == reldist ]
+then
+    python3 src/simulation_scripts/bosons_vs_fermions.py
+
 else
     python3 src/simulation_scripts/"$1"
 fi

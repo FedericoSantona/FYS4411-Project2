@@ -22,7 +22,7 @@ class Hamiltonian:
         """
         self._N = nparticles
         self._dim = dim
-        self._int_type = config.interaction
+        self._int_type = int_type
 
         match backend:
             case "numpy":

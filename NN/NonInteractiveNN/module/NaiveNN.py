@@ -2,17 +2,23 @@
 from numba import njit
 # import np
 import numpy as np
+import jax.numpy as jnp
+from jax import vmap
 
 # initialize params with Dict of numba
 
 from numba import types
 from numba.typed import Dict
+from jax import lax
+import itertools
 
 # randomseed
 np.random.seed(0)
 
 # import plt
 import matplotlib.pyplot as plt
+from tqdm import tqdm
+
 
 
 
@@ -218,6 +224,8 @@ def get_relative_distance(X):
             relative_dist[i*(i-1)//2+j] = np.sqrt(np.sum((X[i]-X[j])**2))
     return relative_dist
 
+N = 4
+D = 3
 
 # nn is a function that from X and params g
 @njit
@@ -243,15 +251,18 @@ def nn(X, params):
     a2 = np.tanh(z2)
 
     gamma = params['gamma']
+
+    print("X_shape " , X.shape)
     
-    return z0 + gamma*a2
+    return z0 + gamma*a2 
 
 
 @njit
 def psi_nn(X, params):
+    X_ = X
+
+    breakpoint()
     return np.exp(nn(X, params))
-
-
 
 def nn_grad_params(X, params, grad, h=1e-5):
     for key in params:
@@ -391,11 +402,15 @@ def energy_grad_param(N, D, H,
 # input 
 # for step in optimization_step, get metropolis for batch_step, get energy_grad_param, update params using lr
 def optimization(nn, params, N, D, H, nn_grad_params, local_kinetic_energy, local_potential_energy, optimization_steps, batch_size, lr=0.01):
-    for i in range(optimization_steps):
-        print("params",params)
+     
+    for i in tqdm(range(optimization_steps), desc="Optimization Progress"):
+        #print("params",params)
         X_chain = metropolis(N, D, nn, params, batch_size, 0.1)
         grad_params = energy_grad_param(N, D, H, X_chain, params, nn_grad_params, local_kinetic_energy, local_potential_energy)
-        print("grad_params", grad_params)
+        #print("grad_params", grad_params)
         for key in params:
             params[key] = params[key] - lr*grad_params[key]
     return params
+
+
+

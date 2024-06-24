@@ -191,22 +191,24 @@ def plot_one_body_density():
 
     # Load the data
 
-    X1 = np.loadtxt("data_analysis/X1.dat")
-    Y1 = np.loadtxt("data_analysis/Y1.dat")
-    r1 = np.loadtxt("data_analysis/r1.dat")
-    rho_non_int = np.loadtxt("data_analysis/rho_non_int.dat")
-    rho_int = np.loadtxt("data_analysis/rho_int.dat")
-    rho1_non_int = np.loadtxt("data_analysis/rho1_non_int.dat")
-    rho1_int = np.loadtxt("data_analysis/rho1_int.dat")
+    # Load the data
+
+    
+
+    r_values = np.loadtxt("data_analysis/r_values.dat")
+    density_int = np.loadtxt("data_analysis/density_int.dat") 
+    density_non_int = np.loadtxt("data_analysis/density_non_int.dat")
+
 
     # Set the seaborn style
     sns.set(style='whitegrid', context='talk')
 
+
    
     # Create the plot
     plt.figure(figsize=(10, 8))
-    sns.lineplot(x=r1, y=rho1_int, label='Interacting Particles', color='blue', lw=2)
-    sns.lineplot(x=r1, y=rho1_non_int, label='Non-interacting Particles', color='red', lw=2)
+    sns.lineplot(x=r_values, y=density_int, label='Interacting Particles', color='blue', lw=2)
+    sns.lineplot(x=r_values, y=density_non_int, label='Non-interacting Particles', color='red', lw=2)
     plt.xlabel('$r$', fontsize=14)
     plt.ylabel(r'$\rho(r)$', fontsize=14)
     plt.title('One-body Density as a Function of Radial Distance', fontsize=16)
@@ -243,35 +245,28 @@ def plot_heatmap(part_typ, n_part, optimizer, mcmc_alg):
     # If you want to also display the heatmap
 
 
-def position_plot(nparticles,  particle_type , nsamples):
+def position_plot():
 
-    sampled_positions = np.loadtxt(f"data_analysis/sampled_positions_{particle_type}_{nparticles}_{nsamples}.dat")
+    rel_dist_bos = np.loadtxt(f"data_analysis/rel_dist_bos.dat")
+    rel_dist_fer = np.loadtxt(f"data_analysis/rel_dist_fer.dat")
 
+    # Plot the histogram
+    sns.set(style="whitegrid")
 
-   
-    # Assuming each column is a particle and each row is a sample, create a DataFrame
-    df = pd.DataFrame(sampled_positions, columns=[f'Particle {i+1}' for i in range(sampled_positions.shape[1])])
-    df['Sample'] = df.index % 100  # Recreate the sample index if needed, modify '100' based on actual samples per chain
+    plt.figure(figsize=(12, 6))
+    sns.histplot(rel_dist_fer, bins=100, kde=False, color='b', stat='density', label = 'Fermions', alpha=0.8)
+    sns.histplot(rel_dist_bos, bins=100, kde=False, color='orange', stat='density', label= 'Bosons', alpha=0.5)
 
-    # Melting the DataFrame to use Seaborn easily
-    df_melted = df.melt(id_vars=['Sample'], var_name='Particle', value_name='Distance')
+    # Customize the plot
+    plt.title('Relative Distance Distribution')
+    plt.xlabel('Relative Distance [a.u.]')
+    plt.ylabel('Probability Density')
+    plt.legend()
+    plt.grid(True)
+    plt.savefig(f"figures/relative_dist.pdf")
 
-    # Set up the FacetGrid
-    g = sns.FacetGrid(df_melted, col="Particle", col_wrap=3, height=4, aspect=1.5, hue='Sample', palette='viridis')
-    g.map(plt.scatter, 'Sample', 'Distance', alpha=0.6, s=20)  # Scatter plot for each particle's position over time
-
-    # Adding a line plot to connect the positions, to show the movement over samples
-    g.map(plt.plot, 'Sample', 'Distance', alpha=0.3)
-
-    # Enhance the plot
-    g.set_titles("{col_name}")
-    g.add_legend(title="Sample Index")
-
-    plt.subplots_adjust(top=0.9)
-    g.fig.suptitle(f'Particle Distances Over Time for {nparticles} {particle_type}  with {nsamples} samples ')  # Overall title
     
-    # Save the figure
-    plt.savefig("figures/position_plot.pdf")
+
 
 
 def print_table():
@@ -305,12 +300,12 @@ def print_table():
 #training_plot(config.particle_type, config.nparticles)
 #bootstrap_plots(config.particle_type, config.nparticles)
 #plot_delta_t()
-plot_one_body_density()
+#plot_one_body_density()
 #plot_int_energy_vs_particles()
 #plot_energy_vs_particles()
 #plot_heatmap("bosons","1","adam","m")
 #plot_heatmap("bosons","2","adam","mh")
-#position_plot(config.nparticles, config.particle_type, config.nsamples)
+position_plot()
 
 
 

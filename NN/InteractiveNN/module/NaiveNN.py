@@ -16,6 +16,7 @@ import matplotlib.pyplot as plt
 
 # import sqrt
 from math import sqrt
+from tqdm import tqdm
 
 
 
@@ -338,7 +339,7 @@ def local_kinetic_energy(X, params, h=1e-5):
 @njit
 def local_potential_energy(X):
     relative_dist = get_relative_distance(X)
-    return 0.5*np.sum(X**2) + np.sum(1/relative_dist)
+    return np.sum(1/relative_dist) + 0.5*np.sum(X**2) 
 
 
 def local_energies(chain, params):
@@ -423,7 +424,7 @@ def optimization(N, D, H,
                  optimization_steps, batch_size, step_size=0.1,
                  lr=0.01, decay=0.99, verbose=False):
     energies = np.zeros(optimization_steps)
-    for i in range(optimization_steps):
+    for i in tqdm(range(optimization_steps), desc="Optimization Progress"):
 
         X_chain = metropolis(N, D, params, batch_size, step_size)
         grad_params, energies[i] = energy_grad_param(N, D, H, params, X_chain)
@@ -443,7 +444,8 @@ def optimization_adam(N, D, H,
     energies = np.zeros(optimization_steps)
     m = init_params_zeros(N, D, H)
     v = init_params_zeros(N, D, H)
-    for i in range(optimization_steps):
+    
+    for i in tqdm(range(optimization_steps), desc="Optimization Progress"):
         X_chain = metropolis(N, D, params, batch_size, step_size)
         grad_params, energies[i] = energy_grad_param(N, D, H, params, X_chain)
         for key in params:

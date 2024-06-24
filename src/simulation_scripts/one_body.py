@@ -49,7 +49,7 @@ def setup(interaction_type):
 
     # set up the wave function with some of its properties 
     system.set_wf(config.wf_type, config.nparticles, config.dim)
-    system.set_hamiltonian(type_=config.hamiltonian, int_type=config.interaction, omega=1.0)
+    system.set_hamiltonian(type_=config.hamiltonian, int_type=interaction_type, omega=1.0)
     system.set_sampler(mcmc_alg=config.mcmc_alg, scale=config.scale)
     system.set_optimizer(optimizer=config.optimizer,eta=config.eta)
     cycles , a_values , b_values , W_values , energies = system.train(
@@ -62,69 +62,45 @@ def setup(interaction_type):
     wave_function = system.wf
     return wave_function
 
-wave_function_non_int = setup("None")
-wave_function_int = setup("Coulomb")
+wf_non_int = setup("None")
+wf_int = setup("Coulomb")
 
-# Parameters
-x_min, x_max = -5.0, 5.0
-y_min, y_max = -5.0, 5.0
-N = 100  # Number of points for numerical integration
+def one_body_density(wf, r_values, n_samples=10000):
+    densities = []
+    n_particles = 2
+    n_dim = 2
 
-# Grid for (x1, y1)
-x1 = np.linspace(x_min, x_max, N)
-y1 = np.linspace(y_min, y_max, N)
-X1, Y1 = np.meshgrid(x1, y1)
+    for r in r_values:
+        sample_densities = []
+        for _ in range(n_samples):
+            # Generate random positions for other particles
+            other_particles = np.random.randn(n_particles - 1, n_dim)
 
-# Initialize the density array
-rho_non_int = np.zeros_like(X1)
-rho_int = np.zeros_like(X1)
-r = np.sqrt(X1**2 + Y1**2)
+            # Combine the fixed particle at distance r with other particles
+            r_matrix = np.vstack(([r, 0], other_particles))
 
-# Calculate the one-body density by integrating out (x2, y2)
-for i in range(N):
-    for j in range(N):
-        def integrand_non_int(x2, y2):
-            r = np.array([[X1[i, j], Y1[i, j]], [x2, y2]])
-            return np.abs(wave_function_non_int(r))**2 
-        def integrand_int(x2, y2):
-            r = np.array([[X1[i, j], Y1[i, j]], [x2, y2]])
-            return np.abs(wave_function_int(r))**2
+            # Evaluate the wave function and compute the density
+            density = 2* (wf(r_matrix))
+            sample_densities.append(np.exp(density))
         
-        result_non_int, _ = dblquad(integrand_non_int, x_min, x_max, lambda x2: y_min, lambda x2: y_max)
-        result_int, _ = dblquad(integrand_int, x_min, x_max, lambda x2: y_min, lambda x2: y_max)
-        rho_non_int[i, j] = result_non_int
-        rho_int[i, j] = result_int
+        # Average density over all samples
+        avg_density = np.mean(sample_densities)
+        densities.append(avg_density)
+    
+    densities = np.array(densities)
+    return densities / np.trapz(densities, r_values)
 
-# Normalize the density
-dx = (x_max - x_min) / (N - 1)
-dy = (y_max - y_min) / (N - 1)
-rho_non_int /= np.trapz(np.trapz(rho_non_int, dx=dx), dx=dy)
-rho_int /= np.trapz(np.trapz(rho_int, dx=dx), dx=dy)
+# Define a range of distances from the origin
+r_values = np.linspace(0, 4, 300)  # Adjust the range and number of points as needed
 
-
-# Bin the results by radial distance
-r_flat = r.flatten()
-rho_flat_non_int = rho_non_int.flatten()
-rho_flat_int = rho_int.flatten()
-r1 = np.linspace(0, np.max(r_flat), N)
-rho1_non_int = np.zeros_like(r1)
-rho1_int = np.zeros_like(r1)
-
-for i in range(len(r1)-1):
-    mask = (r_flat >= r1[i]) & (r_flat < r1[i+1])
-    if np.sum(mask) > 0:
-        rho1_non_int[i] = np.mean(rho_flat_non_int[mask])
-        rho1_int[i] = np.mean(rho_flat_int[mask])
+# Calculate the one-body densities for wf_int and wf_non_int
+density_int = one_body_density(wf_int, r_values)
+density_non_int = one_body_density(wf_non_int, r_values)
 
 
-
-np.savetxt(f"data_analysis/X1.dat", X1)
-np.savetxt(f"data_analysis/Y1.dat", Y1)
-np.savetxt(f"data_analysis/r1.dat", r1)
-np.savetxt(f"data_analysis/rho_non_int.dat", rho_non_int)
-np.savetxt(f"data_analysis/rho_int.dat", rho_int)
-np.savetxt(f"data_analysis/rho1_non_int.dat", rho1_non_int)
-np.savetxt(f"data_analysis/rho1_int.dat", rho1_int)
+np.savetxt(f"data_analysis/r_values.dat", r_values)
+np.savetxt(f"data_analysis/density_int.dat", density_int)
+np.savetxt(f"data_analysis/density_non_int.dat", density_non_int)
 
 
 
